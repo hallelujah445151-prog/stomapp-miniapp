@@ -236,7 +236,7 @@ function App() {
       <AuthProvider>
         <ToastProvider>
         <AppInitializer>
-          <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+            <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

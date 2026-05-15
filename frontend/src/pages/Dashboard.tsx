@@ -16,13 +16,15 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      loadOrders(user.id, user.role);
+      loadOrders();
     }
   }, [user, loadOrders]);
 
   useEffect(() => {
-    loadOrders(user?.id ? filter : undefined);
-  }, [filter, user]);
+    if (user) {
+      loadOrders(filter !== 'all' ? filter : undefined);
+    }
+  }, [filter]);
 
   // Фильтрация заказов с учетом роли
   let filteredOrders = filter === 'all' ? orders : orders.filter(order => order.status === filter);
