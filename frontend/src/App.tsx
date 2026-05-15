@@ -589,9 +589,27 @@ const CreateOrderPage: React.FC = () => {
     apiService.getTechnicians().then(setTechnicians).catch(()=>{});
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/dashboard');
+    if (!formData.doctor_id || !formData.technician_id || !formData.work_type || !formData.deadline) {
+      alert('Заполните все обязательные поля: врач, техник, вид работы, срок');
+      return;
+    }
+    try {
+      await apiService.createOrder({
+        doctor_id: formData.doctor_id,
+        technician_id: formData.technician_id,
+        patient_name: formData.patient_name,
+        work_type: formData.work_type,
+        quantity: formData.quantity,
+        deadline: formData.deadline,
+        description: formData.description
+      });
+      alert('Заказ создан!');
+      navigate('/dashboard');
+    } catch (e: any) {
+      alert('Ошибка: ' + (e?.response?.data?.detail || e.message));
+    }
   };
 
   const handleBack = () => {
