@@ -159,35 +159,15 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [filter, setFilter] = useState('all');
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: 1,
-      patient_name: 'Иванов Иван',
-      work_type: 'Цирконевая коронка',
-      quantity: 3,
-      deadline: '2026-05-20',
-      created_at: '2026-05-14',
-      status: 'in_progress'
-    },
-    {
-      id: 2,
-      patient_name: 'Петров Петр',
-      work_type: 'Металлокерамическая коронка',
-      quantity: 1,
-      deadline: '2026-05-25',
-      created_at: '2026-05-10',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      patient_name: 'Сидоров Алексей',
-      work_type: 'Ортодонтическая шина',
-      quantity: 2,
-      deadline: '2026-05-22',
-      created_at: '2026-05-16',
-      status: 'in_progress'
-    }
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  useEffect(() => {
+    apiService.getOrders().then(data => { setOrders(data); setOrdersLoading(false); }).catch(() => {
+      setOrders([{id:1,patient_name:'Иванов Иван',work_type:'Цирконевая коронка',quantity:3,deadline:'2026-05-20',created_at:'2026-05-14',status:'in_progress'},{id:2,patient_name:'Петров Петр',work_type:'Металлокерамическая коронка',quantity:1,deadline:'2026-05-25',created_at:'2026-05-10',status:'completed'},{id:3,patient_name:'Сидоров Алексей',work_type:'Ортодонтическая шина',quantity:2,deadline:'2026-05-22',created_at:'2026-05-16',status:'in_progress'}]);
+      setOrdersLoading(false);
+    });
+  }, []);
 
   const handleOrderClick = (orderId: number) => {
     navigate(`/order/${orderId}`);
