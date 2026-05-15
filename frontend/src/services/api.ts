@@ -97,6 +97,20 @@ export const apiService = {
 
   async updatePersonnel(personnelId: number, personnel: PersonnelUpdate): Promise<void> {
     await api.put(`/personnel/${personnelId}`, personnel);
+  },
+
+  // Reports
+  async getReportsSummary(): Promise<{total:number,in_progress:number,completed:number,urgent:number}> {
+    const response = await api.get('/reports/summary');
+    return response.data;
+  },
+  async getReportsByDoctor(): Promise<{id:number,name:string,total:number,active:number,done:number}[]> {
+    const response = await api.get('/reports/by-doctor');
+    return response.data;
+  },
+  async getReportsByTechnician(): Promise<{id:number,name:string,total:number,active:number,done:number}[]> {
+    const response = await api.get('/reports/by-technician');
+    return response.data;
   }
 };
 

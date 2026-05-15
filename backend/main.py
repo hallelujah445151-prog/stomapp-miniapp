@@ -620,6 +620,74 @@ if os.path.exists(STATIC_DIR):
         return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
+# Отчёты и статистика
+@app.get("/api/reports/summary")
+async def get_summary(current_user: dict = Depends(get_current_user)):
+    """Сводка по заказам"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT COUNT(*) FROM orders")
+        total = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM orders WHERE status = 'in_progress'")
+        in_progress = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM orders WHERE status = 'completed'")
+        completed = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM orders WHERE status = 'in_progress' AND deadline <= date('now', '+2 days')")
+        urgent = cursor.fetchone()[0]
+        conn.close()
+        return {"total": total, "in_progress": in_progress, "completed": completed, "urgent": urgent}
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/reports/by-doctor")
+async def get_by_doctor(current_user: dict = Depends(get_current_user)):
+    """Статистика по врачам"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT u.id, u.name, 
+                   COUNT(o.id) as total,
+                   SUM(CASE WHEN o.status='in_progress' THEN 1 ELSE 0 END) as active,
+                   SUM(CASE WHEN o.status='completed' THEN 1 ELSE 0 END) as done
+            FROM users u LEFT JOIN orders o ON o.doctor_id = u.id
+            WHERE u.role = 'doctor' AND u.is_active = 1
+            GROUP BY u.id ORDER BY total DESC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        return [{"id": r[0], "name": r[1], "total": r[2], "active": r[3], "done": r[4]} for r in rows]
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/reports/by-technician")
+async def get_by_technician(current_user: dict = Depends(get_current_user)):
+    """Статистика по техникам"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT u.id, u.name,
+                   COUNT(o.id) as total,
+                   SUM(CASE WHEN o.status='in_progress' THEN 1 ELSE 0 END) as active,
+                   SUM(CASE WHEN o.status='completed' THEN 1 ELSE 0 END) as done
+            FROM users u LEFT JOIN orders o ON o.technician_id = u.id
+            WHERE u.role = 'technician' AND u.is_active = 1
+            GROUP BY u.id ORDER BY total DESC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        return [{"id": r[0], "name": r[1], "total": r[2], "active": r[3], "done": r[4]} for r in rows]
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     

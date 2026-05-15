@@ -239,6 +239,16 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Admin: сводка */}
+      {user?.is_admin && (
+        <div style={{ marginBottom: '15px', padding: '12px 15px', backgroundColor: '#e3f2fd', borderRadius: '8px', display: 'flex', gap: '15px', flexWrap: 'wrap', fontSize: '13px' }}>
+          <span>📋 Всего: <b>{orders.length}</b></span>
+          <span>🔵 В работе: <b>{orders.filter(o=>o.status==='in_progress').length}</b></span>
+          <span>✅ Готово: <b>{orders.filter(o=>o.status==='completed').length}</b></span>
+          <span>🔥 Срочных: <b>{orders.filter(o=>o.status==='in_progress'&&o.deadline<=new Date(Date.now()+2*864e5).toISOString().split('T')[0]).length}</b></span>
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'white', borderRadius: '8px' }}>
         <div style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
