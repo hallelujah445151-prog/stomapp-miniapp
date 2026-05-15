@@ -1,0 +1,8 @@
+{
+  "name": "stomapp-miniapp",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "python python_http_server.py",
+    "deploy": "vercel --prod"
+  }
+}
