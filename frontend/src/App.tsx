@@ -577,12 +577,20 @@ const CreateOrderPage: React.FC = () => {
     work_type: '',
     quantity: 1,
     deadline: '',
-    description: ''
+    description: '',
+    doctor_id: 0,
+    technician_id: 0
   });
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [technicians, setTechnicians] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiService.getDoctors().then(setDoctors).catch(()=>{});
+    apiService.getTechnicians().then(setTechnicians).catch(()=>{});
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Create order and navigate back to dashboard
     navigate('/dashboard');
   };
 
@@ -720,6 +728,40 @@ const CreateOrderPage: React.FC = () => {
             <>
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
+                  👨‍⚕️ Врач
+                </label>
+                <select
+                  required
+                  value={formData.doctor_id}
+                  onChange={(e) => setFormData({ ...formData, doctor_id: Number(e.target.value) })}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}
+                >
+                  <option value={0}>Выберите врача</option>
+                  {doctors.map((d: any) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
+                  🔧 Техник
+                </label>
+                <select
+                  required
+                  value={formData.technician_id}
+                  onChange={(e) => setFormData({ ...formData, technician_id: Number(e.target.value) })}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}
+                >
+                  <option value={0}>Выберите техника</option>
+                  {technicians.map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
                   📊 Количество
                 </label>
                 <input
@@ -728,13 +770,7 @@ const CreateOrderPage: React.FC = () => {
                   min="1"
                   value={formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                  style={{ 
-                    width: '100%', 
-                    padding: '10px', 
-                    border: '1px solid #ddd', 
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}
                   placeholder="Количество единиц"
                 />
               </div>
@@ -748,49 +784,13 @@ const CreateOrderPage: React.FC = () => {
                   required
                   value={formData.deadline}
                   onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                  style={{ 
-                    width: '100%', 
-                    padding: '10px', 
-                    border: '1px solid #ddd', 
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}
                 />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <button
-                  type="button"
-                  onClick={() => handleBack()}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#6c757d',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ← Назад
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleNext()}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#229ED9',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Далее →
-                </button>
+                <button type="button" onClick={() => handleBack()} style={{ padding: '12px 24px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' }}>← Назад</button>
+                <button type="button" onClick={() => handleNext()} style={{ padding: '12px 24px', backgroundColor: '#229ED9', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' }}>Далее →</button>
               </div>
             </>
           )}
