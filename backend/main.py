@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
@@ -14,13 +16,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'basestom', 
 def get_connection():
     """Получение соединения с БД"""
     import sqlite3
-    DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'basestom', 'data', 'orders.db'))
+    DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'orders.db')
     return sqlite3.connect(DB_PATH)
 
 def init_db():
     """Инициализация БД"""
     import sqlite3
-    DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'basestom', 'data', 'orders.db')
+    DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'orders.db')
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     
     conn = sqlite3.connect(DB_PATH)
@@ -388,7 +390,7 @@ async def get_technicians(current_user: dict = Depends(get_current_user)):
 async def get_work_types(current_user: dict = Depends(get_current_user)):
     """Получение справочника видов работ из references.json"""
     import json
-    references_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'basestom', 'data', 'references.json'))
+    references_path = os.path.join(os.path.dirname(__file__), 'data', 'references.json')
     
     try:
         with open(references_path, 'r', encoding='utf-8') as f:
@@ -597,6 +599,20 @@ async def create_personnel(
         conn.rollback()
         conn.close()
         raise HTTPException(status_code=500, detail=f"Ошибка при создании сотрудника: {str(e)}")
+
+
+# Раздача статического фронтенда (для продакшена)
+STATIC_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs')
+
+if os.path.exists(STATIC_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+    
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str = ""):
+        file_path = os.path.join(STATIC_DIR, full_path if full_path else "index.html")
+        if os.path.exists(file_path) and not full_path.startswith("api"):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 if __name__ == "__main__":

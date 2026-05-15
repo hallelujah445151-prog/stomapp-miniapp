@@ -958,7 +958,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter basename="/stomapp-miniapp">
+    <BrowserRouter>
       <AuthProvider>
         <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
           <Routes>
