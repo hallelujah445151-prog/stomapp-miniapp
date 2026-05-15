@@ -22,6 +22,11 @@ export const RoleBasedContent: React.FC<RoleBasedContentProps> = ({
   }
 
   // Определяем контент на основе роли пользователя
+  // Админ видит админский контент, даже если основная роль другая
+  if (user.is_admin) {
+    return <>{admin}</>;
+  }
+  
   switch (user.role) {
     case 'admin':
       return <>{admin}</>;
@@ -56,7 +61,8 @@ export const withRoleProtection = (
       }
 
       // Проверяем роль пользователя
-      if (user && requiredRoles.includes(user.role)) {
+      // is_admin даёт доступ ко всем админским функциям
+      if (user && (requiredRoles.includes(user.role) || (user.is_admin && requiredRoles.includes('admin')))) {
         return <Component {...props} />;
       }
 

@@ -222,12 +222,12 @@ const DashboardPage: React.FC = () => {
             📋 Мои заказы
           </h1>
           <p style={{ margin: '5px 0 0 0 15px', fontSize: '14px', color: '#666' }}>
-            Привет, {user?.name}! Роль: {user?.role === 'doctor' ? '👨‍⚕️ Врач' : user?.role === 'technician' ? '🔧 Техник' : '👤 Администратор'}
+            Привет, {user?.name}! Роль: {user?.is_admin ? '👑 ' : ''}{user?.role === 'doctor' ? '👨‍⚕️ Врач' : user?.role === 'technician' ? '🔧 Техник' : '👤 Администратор'}
           </p>
         </div>
         
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {(user?.role === 'admin' || user?.role === 'doctor') && (
+          {(user?.is_admin || user?.role === 'admin' || user?.role === 'doctor') && (
             <button
               onClick={(e) => { e.preventDefault(); handleCreateOrder(); }}
               style={{
@@ -334,7 +334,7 @@ const DashboardPage: React.FC = () => {
           <div style={{ fontSize: '20px', fontWeight: '600', marginBottom: '10px' }}>
             {filter === 'all' ? 'Нет заказов' : `Нет заказов со статусом "${filter === 'in_progress' ? 'В работе' : 'Выполненные'}"`}
           </div>
-          {filter === 'all' && (user?.role === 'admin' || user?.role === 'doctor') && (
+          {filter === 'all' && (user?.is_admin || user?.role === 'admin' || user?.role === 'doctor') && (
             <button
               onClick={(e) => { e.preventDefault(); handleCreateOrder(); }}
               style={{

@@ -70,7 +70,7 @@ export const Navigation: React.FC = () => {
           📋 Главная
         </button>
         
-        {(user?.role === 'admin' || user?.role === 'doctor') && (
+        {(user?.is_admin || user?.role === 'admin' || user?.role === 'doctor') && (
           <button
             className="nav-button"
             onClick={() => handleNavigation('/create')}

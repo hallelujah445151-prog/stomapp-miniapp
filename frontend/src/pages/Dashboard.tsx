@@ -101,7 +101,7 @@ export const Dashboard: React.FC = () => {
           title={`📋 ${user?.role === 'technician' ? 'Мои заказы' : 'Мои заказы'}`}
           subtitle={`Всего: ${orders.length} | В работе: ${inProgressCount} | Выполнено: ${completedCount}`}
           actions={
-            (user?.role === 'admin' || user?.role === 'doctor') && (
+            (user?.is_admin || user?.role === 'admin' || user?.role === 'doctor') && (
               <button 
                 className="button button-primary" 
                 onClick={() => navigate('/create')}
