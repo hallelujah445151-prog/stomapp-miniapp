@@ -48,7 +48,8 @@ const LoginPage: React.FC = () => {
         id: result.user.id,
         name: result.user.name,
         telegram_id: String(result.user.telegram_id),
-        role: result.user.role
+        role: result.user.role,
+        is_admin: result.user.is_admin
       });
     } catch (err: any) {
       const msg = err?.response?.data?.detail || 'Ошибка входа. Проверьте Telegram ID.';
@@ -1008,7 +1009,8 @@ const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) =
             id: result.user.id,
             name: result.user.name,
             telegram_id: String(result.user.telegram_id),
-            role: result.user.role
+            role: result.user.role,
+            is_admin: result.user.is_admin
           });
           return;
         }

@@ -5,6 +5,7 @@ interface User {
   name: string;
   telegram_id?: string;
   role: 'technician' | 'doctor' | 'admin';
+  is_admin: boolean;
 }
 
 interface AuthState {

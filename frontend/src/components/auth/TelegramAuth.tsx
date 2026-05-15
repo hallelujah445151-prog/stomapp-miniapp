@@ -33,7 +33,8 @@ export const TelegramAuth: React.FC<TelegramAuthProps> = ({ onLogin }) => {
               id: user.id || Date.now(),
               name: `${user.first_name} ${user.last_name || ''}`.trim(),
               telegram_id: user.id?.toString(),
-              role: 'doctor', // По умолчанию назначаем врача
+              role: 'doctor' as const,
+              is_admin: false,
             };
             
             // Авторизуем пользователя
