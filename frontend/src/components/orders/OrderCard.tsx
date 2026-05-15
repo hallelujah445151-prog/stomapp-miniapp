@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatDeadline, getStatusText, getStatusColor } from '../../utils/formatters';
+import { useStore } from '../../store';
 
 interface OrderCardProps {
   order: any;
@@ -134,8 +135,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, showTechni
             }}
             onClick={(e) => {
               e.stopPropagation();
-              // Прямое изменение статуса через store
-              const { updateOrder } = require('../../store').useStore.getState();
+              const { updateOrder } = useStore.getState();
               updateOrder(order.id, { status: 'completed' });
             }}
           >

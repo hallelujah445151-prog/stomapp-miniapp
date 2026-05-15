@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/stomapp-miniapp/',
   server: {
     port: 3000,
     host: true,
@@ -14,7 +15,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'dist',
-    sourcemap: true
+    outDir: '../docs',
+    sourcemap: false
   }
 })

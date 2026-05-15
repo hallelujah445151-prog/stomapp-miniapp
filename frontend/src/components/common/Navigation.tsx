@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/auth';
-import { useStore } from '../store';
+import { useAuthStore } from '../../store/auth';
+import { useStore } from '../../store';
 
 export const Navigation: React.FC = () => {
   const navigate = useNavigate();

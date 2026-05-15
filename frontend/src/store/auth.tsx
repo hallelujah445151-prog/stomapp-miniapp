@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-// Простая система авторизации без сложных типов
 interface User {
   id: number;
   name: string;
@@ -8,26 +7,28 @@ interface User {
   role: 'technician' | 'doctor' | 'admin';
 }
 
-interface AuthContextType {
+interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (userData: User) => void;
   logout: () => void;
 }
 
-const AuthContext = React.createContext<AuthContextType>({
+const AuthContext = React.createContext<AuthState>({
   user: null,
   isAuthenticated: false,
+  isLoading: false,
   login: () => {},
   logout: () => {}
 });
 
-const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Проверяем сохраненные данные
     const savedUser = localStorage.getItem('stomapp_user');
     if (savedUser) {
       try {
@@ -38,6 +39,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         console.error('Error loading user:', e);
       }
     }
+    setIsLoading(false);
   }, []);
 
   const login = (userData: User) => {
@@ -54,13 +56,26 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
+export const useAuthStore = () => {
   const context = React.useContext(AuthContext);
   return context;
+};
+
+useAuthStore.getState = () => {
+  const savedUser = localStorage.getItem('stomapp_user');
+  const user = savedUser ? JSON.parse(savedUser) : null;
+  return {
+    user,
+    isAuthenticated: !!user,
+    logout: () => {
+      localStorage.removeItem('stomapp_user');
+      window.location.reload();
+    }
+  };
 };
