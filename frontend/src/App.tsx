@@ -254,58 +254,24 @@ function App() {
   );
 }
 
-// Auto-login initializer - detects Telegram user and auto-authenticates
+// Auto-login initializer
 const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { login, isAuthenticated, isLoading } = useAuthStore();
+  const { login, isAuthenticated } = useAuthStore();
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      setChecked(true);
-      return;
-    }
-    if (isLoading) return;
+    if (isAuthenticated) { setChecked(true); return; }
 
-    const tryAutoLogin = async () => {
-      try {
-        const tg = (window as any).Telegram?.WebApp;
-        let userId = tg?.initDataUnsafe?.user?.id;
-        
-        if (!userId && tg?.initData) {
-          const params = new URLSearchParams(tg.initData);
-          const userStr = params.get('user');
-          if (userStr) {
-            const user = JSON.parse(decodeURIComponent(userStr));
-            userId = user.id;
-          }
-        }
-        
-        if (userId) {
-          const result = await apiService.loginByTelegramId(userId);
-          login({
-            id: result.user.id,
-            name: result.user.name,
-            telegram_id: String(result.user.telegram_id),
-            role: result.user.role,
-            is_admin: result.user.is_admin
-          });
-          return;
-        }
-      } catch (e) {
-        // fallback to manual login
-      }
-      setChecked(true);
-    };
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg?.initDataUnsafe?.user?.id) { setChecked(true); return; }
 
-    // Даём Telegram SDK время загрузиться
-    const timer = setTimeout(tryAutoLogin, 500);
-    return () => clearTimeout(timer);
-  }, [isAuthenticated, isLoading, login]);
+    const userId = tg.initDataUnsafe.user.id;
+    apiService.loginByTelegramId(userId)
+      .then(result => login({ id: result.user.id, name: result.user.name, telegram_id: String(result.user.telegram_id), role: result.user.role, is_admin: result.user.is_admin }))
+      .catch(() => setChecked(true));
+  }, []);
 
-  if (!checked && !isAuthenticated) {
-    return <LoadingState />;
-  }
-
+  if (!checked && !isAuthenticated) return <LoadingState />;
   return <>{children}</>;
 };
 
