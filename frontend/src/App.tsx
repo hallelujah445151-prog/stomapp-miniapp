@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { AuthProvider, useAuthStore } from './store/auth';
 
 // Простые интерфейсы без строгих типов
 interface Order {
@@ -13,73 +14,10 @@ interface Order {
   description?: string;
 }
 
-interface User {
-  id: number;
-  name: string;
-  role: string;
-  telegram_id?: string;
-}
-
-// Auth Context
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  login: (userData: User) => void;
-  logout: () => void;
-}
-
-const AuthContext = React.createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  login: () => {},
-  logout: () => {}
-});
-
-const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('stomapp_user');
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser) as User;
-        setUser(userData);
-        setIsAuthenticated(true);
-      } catch (e) {
-        console.error('Error loading user:', e);
-      }
-    }
-  }, []);
-
-  const login = (userData: User) => {
-    setUser(userData);
-    setIsAuthenticated(true);
-    localStorage.setItem('stomapp_user', JSON.stringify(userData));
-  };
-
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('stomapp_user');
-    window.location.reload();
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-const useAuth = () => {
-  const context = React.useContext(AuthContext);
-  return context;
-};
-
 // Login Page
 const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuthStore();
   const [formData, setFormData] = useState({
     name: '',
     telegram_id: '',
@@ -87,18 +25,23 @@ const LoginPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    const userData: User = {
+
+    login({
       id: Date.now(),
       name: formData.name,
       telegram_id: formData.telegram_id || undefined,
-      role: formData.role
-    };
-
-    login(userData);
+      role: formData.role as 'admin' | 'doctor' | 'technician'
+    });
+    
     setLoading(false);
   };
 
@@ -213,7 +156,7 @@ const LoginPage: React.FC = () => {
 
 // Protected Route
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -225,7 +168,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Dashboard Page
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthStore();
   const [filter, setFilter] = useState('all');
   const [orders, setOrders] = useState<Order[]>([
     {
@@ -513,7 +456,7 @@ const DashboardPage: React.FC = () => {
 const OrderDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const orderId = params.id ? parseInt(params.id) : 1;
 
   const mockOrder: Order = {
@@ -645,7 +588,7 @@ const OrderDetailsPage: React.FC = () => {
 // Create Order Page
 const CreateOrderPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     patient_name: '',
