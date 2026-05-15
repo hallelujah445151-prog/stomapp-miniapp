@@ -161,6 +161,8 @@ const DashboardPage: React.FC = () => {
   const [filter, setFilter] = useState('all');
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [reportType, setReportType] = useState('');
+  const [reportData, setReportData] = useState<any>(null);
 
   useEffect(() => {
     apiService.getOrders().then(data => { setOrders(data); setOrdersLoading(false); }).catch(() => {
@@ -168,6 +170,20 @@ const DashboardPage: React.FC = () => {
       setOrdersLoading(false);
     });
   }, []);
+
+  const loadReport = async (type: string) => {
+    setReportType(type);
+    try {
+      if (type === 'doctors') setReportData(await apiService.getReportsByDoctor());
+      else if (type === 'technicians') setReportData(await apiService.getReportsByTechnician());
+      else if (type === 'urgent') {
+        const today = new Date().toISOString().split('T')[0];
+        const upcoming = orders.filter((o: any) => o.status === 'in_progress' && o.deadline >= today && o.deadline <= new Date(Date.now()+2*864e5).toISOString().split('T')[0]);
+        setReportData(upcoming.length ? upcoming : null);
+        if (!upcoming.length) alert('Нет срочных заказов');
+      }
+    } catch(e: any) { alert('Ошибка загрузки: ' + (e?.response?.data?.detail || e.message)); }
+  };
 
   const handleOrderClick = (orderId: number) => {
     navigate(`/order/${orderId}`);
@@ -239,13 +255,47 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Admin: сводка */}
+      {/* Admin: сводка + кнопки отчётов */}
       {user?.is_admin && (
-        <div style={{ marginBottom: '15px', padding: '12px 15px', backgroundColor: '#e3f2fd', borderRadius: '8px', display: 'flex', gap: '15px', flexWrap: 'wrap', fontSize: '13px' }}>
-          <span>📋 Всего: <b>{orders.length}</b></span>
-          <span>🔵 В работе: <b>{orders.filter(o=>o.status==='in_progress').length}</b></span>
-          <span>✅ Готово: <b>{orders.filter(o=>o.status==='completed').length}</b></span>
-          <span>🔥 Срочных: <b>{orders.filter(o=>o.status==='in_progress'&&o.deadline<=new Date(Date.now()+2*864e5).toISOString().split('T')[0]).length}</b></span>
+        <div style={{ marginBottom: '15px' }}>
+          <div style={{ padding: '12px 15px', backgroundColor: '#e3f2fd', borderRadius: '8px', display: 'flex', gap: '15px', flexWrap: 'wrap', fontSize: '13px', alignItems: 'center' }}>
+            <span>📋 Всего: <b>{orders.length}</b></span>
+            <span>🔵 В работе: <b>{orders.filter(o=>o.status==='in_progress').length}</b></span>
+            <span>✅ Готово: <b>{orders.filter(o=>o.status==='completed').length}</b></span>
+            <span>🔥 Срочных: <b>{orders.filter(o=>o.status==='in_progress'&&o.deadline<=new Date(Date.now()+2*864e5).toISOString().split('T')[0]).length}</b></span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+            <button onClick={() => loadReport('doctors')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='doctors' ? '#1565c0' : '#fff', color: reportType==='doctors' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>👨‍⚕️ По врачам</button>
+            <button onClick={() => loadReport('technicians')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='technicians' ? '#1565c0' : '#fff', color: reportType==='technicians' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>🔧 По техникам</button>
+            <button onClick={() => loadReport('urgent')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='urgent' ? '#e65100' : '#fff', color: reportType==='urgent' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>🔥 Срочные</button>
+          </div>
+          {reportData && (
+            <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <b style={{ fontSize: '15px' }}>
+                  {reportType === 'doctors' ? '👨‍⚕️ Статистика по врачам' : reportType === 'technicians' ? '🔧 Статистика по техникам' : '🔥 Срочные заказы'}
+                </b>
+                <button onClick={() => { setReportData(null); setReportType(''); }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+              </div>
+              {reportType === 'doctors' && (
+                <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                  <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Врач</th><th style={{ padding: '6px' }}>Всего</th><th style={{ padding: '6px' }}>В работе</th><th style={{ padding: '6px' }}>Готово</th></tr></thead>
+                  <tbody>{reportData.map((r: any) => <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px' }}>{r.total}</td><td style={{ padding: '6px', color: '#1976d2' }}>{r.active}</td><td style={{ padding: '6px', color: '#388e3c' }}>{r.done}</td></tr>)}</tbody>
+                </table>
+              )}
+              {reportType === 'technicians' && (
+                <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                  <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Техник</th><th style={{ padding: '6px' }}>Всего</th><th style={{ padding: '6px' }}>В работе</th><th style={{ padding: '6px' }}>Готово</th></tr></thead>
+                  <tbody>{reportData.map((r: any) => <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px' }}>{r.total}</td><td style={{ padding: '6px', color: '#1976d2' }}>{r.active}</td><td style={{ padding: '6px', color: '#388e3c' }}>{r.done}</td></tr>)}</tbody>
+                </table>
+              )}
+              {reportType === 'urgent' && reportData.map((o: any) => (
+                <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '10px', marginBottom: '6px', backgroundColor: '#fff3e0', borderRadius: '6px', border: '1px solid #ffcc80', cursor: 'pointer', fontSize: '13px' }}>
+                  <b>#{o.id}</b> {o.work_type} — пациент: {o.patient_name||'—'} | ⏰ {o.deadline}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
