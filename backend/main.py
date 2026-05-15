@@ -130,10 +130,6 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     )
 
 
-@app.get("/")
-async def root():
-    return {"message": "StomApp API is running", "version": "1.0.0"}
-
 
 @app.post("/api/auth/telegram")
 async def auth_telegram(auth: TelegramAuth):
@@ -606,11 +602,20 @@ STATIC_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs')
 
 if os.path.exists(STATIC_DIR):
     app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
-    
+
+    @app.get("/")
+    async def root():
+        index_path = os.path.join(STATIC_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        return {"message": "StomApp API is running", "version": "1.0.0"}
+
     @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str = ""):
-        file_path = os.path.join(STATIC_DIR, full_path if full_path else "index.html")
-        if os.path.exists(file_path) and not full_path.startswith("api"):
+    async def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.exists(file_path):
             return FileResponse(file_path)
         return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
