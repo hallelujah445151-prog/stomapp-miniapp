@@ -236,7 +236,8 @@ function App() {
       <AuthProvider>
         <ToastProvider>
         <AppInitializer>
-            <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+          <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+            <ErrorCatcher>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -246,12 +247,22 @@ function App() {
               <Route path="/personnel" element={<ProtectedRoute><PersonnelPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
+            </ErrorCatcher>
           </div>
         </AppInitializer>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );
+}
+
+class ErrorCatcher extends React.Component<{children: React.ReactNode}, {error: string|null}> {
+  state = { error: null as string|null };
+  componentDidCatch(e: Error) { this.setState({ error: e.message + '\n' + e.stack }); }
+  render() {
+    if (this.state.error) return <div style={{padding:40,color:'red',fontSize:14,whiteSpace:'pre-wrap'}}>❌ ОШИБКА:<br/>{this.state.error}</div>;
+    return this.props.children;
+  }
 }
 
 // Auto-login initializer
