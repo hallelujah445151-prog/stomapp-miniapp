@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuthStore } from './store/auth';
 import { apiService } from './services/api';
+import { PersonnelPage } from './pages/PersonnelPage';
 
 // Простые интерфейсы без строгих типов
 interface Order {
@@ -934,10 +935,7 @@ function App() {
       const webApp = window.Telegram.WebApp;
       webApp.ready();
       webApp.expand();
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
       
-      // Set theme from Telegram
       const themeParams = webApp.themeParams || {};
       if (themeParams.bg_color) {
         document.documentElement.style.setProperty('--tg-theme-bg-color', themeParams.bg_color);
@@ -960,19 +958,62 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/create" element={<ProtectedRoute><CreateOrderPage /></ProtectedRoute>} />
-            <Route path="/order/:id" element={<ProtectedRoute><OrderDetailsPage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </div>
+        <AppInitializer>
+          <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+              <Route path="/create" element={<ProtectedRoute><CreateOrderPage /></ProtectedRoute>} />
+              <Route path="/order/:id" element={<ProtectedRoute><OrderDetailsPage /></ProtectedRoute>} />
+              <Route path="/personnel" element={<ProtectedRoute><PersonnelPage /></ProtectedRoute>} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </div>
+        </AppInitializer>
       </AuthProvider>
     </BrowserRouter>
   );
 }
+
+// Auto-login initializer - detects Telegram user and auto-authenticates
+const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { login, isAuthenticated, isLoading } = useAuthStore();
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    const tryAutoLogin = async () => {
+      try {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.initDataUnsafe?.user?.id) {
+          const telegramId = tg.initDataUnsafe.user.id;
+          const result = await apiService.loginByTelegramId(telegramId);
+          login({
+            id: result.user.id,
+            name: result.user.name,
+            telegram_id: String(result.user.telegram_id),
+            role: result.user.role
+          });
+          return;
+        }
+      } catch (e) {
+        // Auto-login failed - user will see login page
+      }
+      setChecked(true);
+    };
+
+    if (!isAuthenticated && !isLoading) {
+      tryAutoLogin();
+    } else {
+      setChecked(true);
+    }
+  }, []);
+
+  if (!checked && !isAuthenticated) {
+    return <LoadingState />;
+  }
+
+  return <>{children}</>;
+};
 
 export default App;

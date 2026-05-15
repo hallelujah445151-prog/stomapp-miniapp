@@ -89,6 +89,25 @@ export const Navigation: React.FC = () => {
           </button>
         )}
         
+        {(user?.is_admin) && (
+          <button
+            className="nav-button"
+            onClick={() => handleNavigation('/personnel')}
+            style={{
+              flex: 1,
+              fontSize: '16px',
+              background: 'transparent',
+              border: 'none',
+              color: location.pathname === '/personnel' ? 'var(--tg-theme-button-color, #2481cc)' : 'var(--tg-theme-text-color, #000000)',
+              padding: '10px',
+              cursor: 'pointer',
+              fontWeight: location.pathname === '/personnel' ? '600' : '400'
+            }}
+          >
+            👥 Персонал
+          </button>
+        )}
+        
         <button
           className="nav-button"
           onClick={handleLogoutClick}
