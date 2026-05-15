@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuthStore } from './store/auth';
 import { apiService } from './services/api';
+import { PersonnelPage } from './pages/PersonnelPage';
 
 // Простые интерфейсы без строгих типов
 interface Order {
@@ -222,30 +223,23 @@ const DashboardPage: React.FC = () => {
             📋 Мои заказы
           </h1>
           <p style={{ margin: '5px 0 0 0 15px', fontSize: '14px', color: '#666' }}>
-            Привет, {user?.name}! Роль: {user?.role === 'doctor' ? '👨‍⚕️ Врач' : user?.role === 'technician' ? '🔧 Техник' : '👤 Администратор'}
+            Привет, {user?.name}! Роль: {user?.is_admin ? '👑 ' : ''}{user?.role === 'doctor' ? '👨‍⚕️ Врач' : user?.role === 'technician' ? '🔧 Техник' : '👤 Администратор'}
           </p>
         </div>
         
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {(user?.role === 'admin' || user?.role === 'doctor') && (
+          {(user?.is_admin || user?.role === 'admin' || user?.role === 'doctor') && (
             <button
               onClick={(e) => { e.preventDefault(); handleCreateOrder(); }}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#229ED9',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                boxShadow: '0 2px 4px rgba(34, 197, 94, 0.1)'
-              }}
-            >
-              ➕ Новый
-            </button>
+              style={{ padding: '10px 20px', backgroundColor: '#229ED9', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: '600', boxShadow: '0 2px 4px rgba(34, 197, 94, 0.1)' }}
+            >➕ Новый</button>
           )}
-          
+          {user?.is_admin && (
+            <button
+              onClick={(e) => { e.preventDefault(); navigate('/personnel'); }}
+              style={{ padding: '10px 20px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: '600' }}
+            >👥 Персонал</button>
+          )}
           <button
             onClick={(e) => { e.preventDefault(); handleLogout(); }}
             style={{
@@ -927,31 +921,40 @@ const LoadingState: React.FC = () => (
 // Main App Component
 function App() {
   const [isInitialized, setIsInitialized] = React.useState(false);
+  const [autoLoginDone, setAutoLoginDone] = React.useState(false);
 
   React.useEffect(() => {
+    // Auto-login for Telegram users
+    if (!localStorage.getItem('stomapp_user')) {
+      const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser?.id) {
+        apiService.loginByTelegramId(tgUser.id)
+          .then(r => localStorage.setItem('stomapp_user', JSON.stringify({
+            id: r.user.id, name: r.user.name, telegram_id: String(r.user.telegram_id),
+            role: r.user.role, is_admin: r.user.is_admin
+          })))
+          .catch(() => {})
+          .finally(() => { window.location.reload(); });
+        return;
+      }
+    }
+    setAutoLoginDone(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!autoLoginDone) return;
     // Telegram WebApp initialization
     if (window.Telegram && window.Telegram.WebApp) {
       const webApp = window.Telegram.WebApp;
       webApp.ready();
       webApp.expand();
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
-      
-      // Set theme from Telegram
       const themeParams = webApp.themeParams || {};
-      if (themeParams.bg_color) {
-        document.documentElement.style.setProperty('--tg-theme-bg-color', themeParams.bg_color);
-      }
-      if (themeParams.text_color) {
-        document.documentElement.style.setProperty('--tg-theme-text-color', themeParams.text_color);
-      }
-      if (themeParams.hint_color) {
-        document.documentElement.style.setProperty('--tg-theme-hint-color', themeParams.hint_color);
-      }
+      if (themeParams.bg_color) document.documentElement.style.setProperty('--tg-theme-bg-color', themeParams.bg_color);
+      if (themeParams.text_color) document.documentElement.style.setProperty('--tg-theme-text-color', themeParams.text_color);
+      if (themeParams.hint_color) document.documentElement.style.setProperty('--tg-theme-hint-color', themeParams.hint_color);
     }
-    
     setIsInitialized(true);
-  }, []);
+  }, [autoLoginDone]);
 
   if (!isInitialized) {
     return <LoadingState />;
@@ -966,8 +969,9 @@ function App() {
             <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/create" element={<ProtectedRoute><CreateOrderPage /></ProtectedRoute>} />
-            <Route path="/order/:id" element={<ProtectedRoute><OrderDetailsPage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFoundPage />} />
+              <Route path="/order/:id" element={<ProtectedRoute><OrderDetailsPage /></ProtectedRoute>} />
+              <Route path="/personnel" element={<ProtectedRoute><PersonnelPage /></ProtectedRoute>} />
+              <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
       </AuthProvider>
