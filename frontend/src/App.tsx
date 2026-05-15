@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuthStore } from './store/auth';
+import { apiService } from './services/api';
 
 // Простые интерфейсы без строгих типов
 interface Order {
@@ -19,11 +20,10 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuthStore();
   const [formData, setFormData] = useState({
-    name: '',
-    telegram_id: '',
-    role: 'doctor'
+    telegram_id: ''
   });
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -31,17 +31,29 @@ const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    login({
-      id: Date.now(),
-      name: formData.name,
-      telegram_id: formData.telegram_id || undefined,
-      role: formData.role as 'admin' | 'doctor' | 'technician'
-    });
+    if (!formData.telegram_id) {
+      setErrorMsg('Введите Telegram ID');
+      return;
+    }
     
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      const result = await apiService.loginByTelegramId(Number(formData.telegram_id));
+      login({
+        id: result.user.id,
+        name: result.user.name,
+        telegram_id: String(result.user.telegram_id),
+        role: result.user.role
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || 'Ошибка входа. Проверьте Telegram ID.';
+      setErrorMsg(msg);
+    }
+
     setLoading(false);
   };
 
@@ -62,69 +74,45 @@ const LoginPage: React.FC = () => {
         maxWidth: '400px',
         width: '100%'
       }}>
-        <h1 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>
+        <h1 style={{ textAlign: 'center', marginBottom: '8px', color: '#333' }}>
           StomApp - Вход
         </h1>
+        <p style={{ textAlign: 'center', marginBottom: '20px', fontSize: '13px', color: '#666' }}>
+          Введите ваш Telegram ID для входа
+        </p>
+
+        {errorMsg && (
+          <div style={{ 
+            backgroundColor: '#ffebee', 
+            color: '#c62828', 
+            padding: '12px', 
+            borderRadius: '8px', 
+            marginBottom: '16px',
+            fontSize: '14px'
+          }}>
+            ❌ {errorMsg}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
-              Имя:
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                border: '1px solid #ddd', 
-                borderRadius: '6px',
-                fontSize: '14px'
-              }}
-              placeholder="Введите имя"
-            />
-          </div>
-
-          <div style={{ marginBottom: '15px' }}>
+          <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
               Telegram ID:
             </label>
             <input
               type="text"
+              required
               value={formData.telegram_id}
-              onChange={(e) => setFormData({ ...formData, telegram_id: e.target.value })}
+              onChange={(e) => setFormData({ telegram_id: e.target.value })}
               style={{ 
                 width: '100%', 
-                padding: '10px', 
-                border: '1px solid #ddd', 
-                borderRadius: '6px',
-                fontSize: '14px'
+                padding: '12px', 
+                border: '2px solid #ddd', 
+                borderRadius: '8px',
+                fontSize: '16px'
               }}
-              placeholder="Ваш Telegram ID"
+              placeholder="Например: 176897162"
             />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
-              Ваша роль:
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                border: '1px solid #ddd', 
-                borderRadius: '6px',
-                fontSize: '14px'
-              }}
-            >
-              <option value="doctor">👨‍⚕️ Врач</option>
-              <option value="technician">🔧 Техник</option>
-              <option value="admin">👤 Администратор</option>
-            </select>
           </div>
 
           <button
@@ -132,11 +120,11 @@ const LoginPage: React.FC = () => {
             disabled={loading}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '14px',
               backgroundColor: loading ? '#ccc' : '#229ED9',
               color: 'white',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: '8px',
               fontSize: '16px',
               fontWeight: '600',
               cursor: loading ? 'not-allowed' : 'pointer'
@@ -146,8 +134,8 @@ const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: '#666' }}>
-          Для демонстрации введите любые данные
+        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: '#999' }}>
+          Ваш Telegram ID должен быть в базе сотрудников
         </p>
       </div>
     </div>

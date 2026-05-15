@@ -94,6 +94,8 @@ class TelegramAuth(BaseModel):
     init_data: str
     user_id: int
 
+class LoginRequest(BaseModel):
+    telegram_id: int
 
 class OrderCreate(BaseModel):
     doctor_id: int
@@ -156,6 +158,38 @@ async def auth_telegram(auth: TelegramAuth):
         }
     else:
         raise HTTPException(status_code=404,         detail="Пользователь не найден")
+
+
+@app.post("/api/auth/login")
+async def login_by_telegram_id(login_data: LoginRequest):
+    """Вход по Telegram ID - поиск в базе users"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT id, name, role, telegram_id, is_admin, is_active FROM users WHERE telegram_id = ? AND is_active = 1",
+        (login_data.telegram_id,)
+    )
+    user = cursor.fetchone()
+    conn.close()
+    
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Пользователь с Telegram ID {login_data.telegram_id} не найден. Обратитесь к администратору."
+        )
+    
+    return {
+        "access_token": "test_token",
+        "user": {
+            "id": user[0],
+            "name": user[1],
+            "role": user[2],
+            "telegram_id": user[3],
+            "is_admin": bool(user[4]),
+            "is_active": bool(user[5])
+        }
+    }
 
 
 @app.get("/api/user/profile")
