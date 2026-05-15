@@ -982,12 +982,28 @@ const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
+    if (isAuthenticated) {
+      setChecked(true);
+      return;
+    }
+    if (isLoading) return;
+
     const tryAutoLogin = async () => {
       try {
         const tg = (window as any).Telegram?.WebApp;
-        if (tg?.initDataUnsafe?.user?.id) {
-          const telegramId = tg.initDataUnsafe.user.id;
-          const result = await apiService.loginByTelegramId(telegramId);
+        let userId = tg?.initDataUnsafe?.user?.id;
+        
+        if (!userId && tg?.initData) {
+          const params = new URLSearchParams(tg.initData);
+          const userStr = params.get('user');
+          if (userStr) {
+            const user = JSON.parse(decodeURIComponent(userStr));
+            userId = user.id;
+          }
+        }
+        
+        if (userId) {
+          const result = await apiService.loginByTelegramId(userId);
           login({
             id: result.user.id,
             name: result.user.name,
@@ -997,17 +1013,15 @@ const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) =
           return;
         }
       } catch (e) {
-        // Auto-login failed - user will see login page
+        // fallback to manual login
       }
       setChecked(true);
     };
 
-    if (!isAuthenticated && !isLoading) {
-      tryAutoLogin();
-    } else {
-      setChecked(true);
-    }
-  }, []);
+    // Даём Telegram SDK время загрузиться
+    const timer = setTimeout(tryAutoLogin, 500);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, isLoading, login]);
 
   if (!checked && !isAuthenticated) {
     return <LoadingState />;
