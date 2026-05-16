@@ -254,7 +254,7 @@ const DashboardPage: React.FC = () => {
             >👥 Персонал</button>
           )}
           <button
-            onClick={(e) => { e.preventDefault(); (window as any).Telegram?.WebApp?.close(); }}
+            onClick={(e) => { e.preventDefault(); const tg=(window as any).Telegram?.WebApp; tg?tg.close():(window.history.length>1?window.history.back():window.close()); }}
             style={{
               padding: '10px 20px',
               backgroundColor: '#9e9e9e',
