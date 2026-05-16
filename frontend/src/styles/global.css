@@ -382,3 +382,16 @@ body {
 .page-enter {
   animation: fadeInUp .25s ease;
 }
+
+:root {
+  --press-scale: 0.97;
+  --press-duration: 0.1s;
+}
+
+@media (pointer: coarse) {
+  button:active:not(:disabled),
+  .card:active {
+    transform: scale(var(--press-scale)) !important;
+    transition: transform var(--press-duration) ease !important;
+  }
+}

@@ -885,6 +885,15 @@ const LoadingState: React.FC = () => (
 function App() {
   const [isInitialized, setIsInitialized] = React.useState(false);
   const [autoLoginDone, setAutoLoginDone] = React.useState(false);
+  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+
+  React.useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => { window.removeEventListener('online', goOnline); window.removeEventListener('offline', goOffline); };
+  }, []);
 
   React.useEffect(() => {
     // Viewport height fix for mobile
@@ -932,6 +941,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      {!isOnline && <div className="slide-down" style={{position:'fixed',top:0,left:0,right:0,zIndex:9999,background:'#f44336',color:'#fff',textAlign:'center',padding:'6px',fontSize:'13px',fontWeight:600}}>Нет подключения к сети</div>}
       <AuthProvider>
         <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
           <Routes>
