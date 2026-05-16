@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from '
 import { AuthProvider, useAuthStore } from './store/auth';
 import { apiService } from './services/api';
 import { PersonnelPage } from './pages/PersonnelPage';
+import { ToastProvider } from './components/common/Toast';
 
 // Простые интерфейсы без строгих типов
 interface Order {
@@ -961,17 +962,19 @@ function App() {
     <BrowserRouter>
       {!isOnline && <div className="slide-down" style={{position:'fixed',top:0,left:0,right:0,zIndex:9999,background:'#f44336',color:'#fff',textAlign:'center',padding:'6px',fontSize:'13px',fontWeight:600}}>Нет подключения к сети</div>}
       <AuthProvider>
+        <ToastProvider>
         <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/create" element={<ProtectedRoute><CreateOrderPage /></ProtectedRoute>} />
-              <Route path="/order/:id" element={<ProtectedRoute><OrderDetailsPage /></ProtectedRoute>} />
-              <Route path="/personnel" element={<ProtectedRoute><PersonnelPage /></ProtectedRoute>} />
-              <Route path="*" element={<NotFoundPage />} />
+            <Route path="/order/:id" element={<ProtectedRoute><OrderDetailsPage /></ProtectedRoute>} />
+            <Route path="/personnel" element={<ProtectedRoute><PersonnelPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );
