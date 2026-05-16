@@ -254,20 +254,19 @@ const DashboardPage: React.FC = () => {
             >👥 Персонал</button>
           )}
           <button
-            onClick={(e) => { e.preventDefault(); handleLogout(); }}
+            onClick={(e) => { e.preventDefault(); (window as any).Telegram?.WebApp?.close(); }}
             style={{
               padding: '10px 20px',
-              backgroundColor: '#f44336',
+              backgroundColor: '#9e9e9e',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
               fontSize: '14px',
               cursor: 'pointer',
-              fontWeight: '600',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              fontWeight: '600'
             }}
           >
-            🚪 Выход
+            ✕ Закрыть
           </button>
         </div>
       </div>
