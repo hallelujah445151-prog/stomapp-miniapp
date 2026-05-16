@@ -87,15 +87,12 @@ export const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ role }
         title={role ? `${getRoleText(role)}ы` : 'Персонал'}
         subtitle={`Всего: ${personnel.length}`}
         actions={
-          !role && (
-            <button
-              className="button button-primary"
-              onClick={() => setShowCreateModal(true)}
-              style={{ padding: '8px 16px', fontSize: '14px' }}
-            >
-              ➕ Добавить
-            </button>
-          )
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="button button-secondary" onClick={() => navigate('/')} style={{ padding: '8px 12px', fontSize: '14px' }}>← Назад</button>
+            {!role && (
+              <button className="button button-primary" onClick={() => setShowCreateModal(true)} style={{ padding: '8px 16px', fontSize: '14px' }}>➕ Добавить</button>
+            )}
+          </div>
         }
       />
 
