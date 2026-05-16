@@ -641,16 +641,73 @@ async def upload_photo(order_id: int, file: UploadFile = File(...), current_user
     return {"message": "Фото загружено", "photo_id": filename}
 
 
-# Уведомление (заглушка — в продакшене через Telegram Bot API)
+# Уведомление — отправка через Telegram Bot API
 @app.post("/api/notify/order-created")
 async def notify_order_created(order_data: dict, current_user: dict = Depends(get_current_user)):
     """Отправить уведомление технику о новом заказе"""
-    # В продакшене здесь вызов Telegram Bot API
-    # Сейчас логируем и возвращаем OK
     technician_id = order_data.get('technician_id')
     order_id = order_data.get('order_id', '?')
-    print(f"[NOTIFY] Order #{order_id} assigned to technician #{technician_id}")
-    return {"message": f"Уведомление отправлено технику #{technician_id}"}
+    
+    if technician_id:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT telegram_id, name FROM users WHERE id = ? AND is_active = 1", (technician_id,))
+        tech = cursor.fetchone()
+        conn.close()
+        
+        if tech:
+            import httpx
+            bot_token = os.getenv('BOT_TOKEN', '')
+            if bot_token:
+                try:
+                    async with httpx.AsyncClient(timeout=10) as client:
+                        await client.post(
+                            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                            json={
+                                "chat_id": tech[0],
+                                "text": f"🔔 Новый заказ #{order_id}!\n\nВид работы назначен на вас.\nПроверьте приложение: https://stomapp-miniapp-1.onrender.com/order/{order_id}",
+                                "parse_mode": "HTML"
+                            }
+                        )
+                    return {"message": f"Уведомление отправлено технику {tech[1]}"}
+                except Exception as e:
+                    return {"message": f"Отправка не удалась: {e}", "sent": False}
+    
+    return {"message": "Техник не найден или бот не настроен", "sent": False}
+
+
+# Синхронизация — эндпоинт для бота
+class SyncOrder(BaseModel):
+    doctor_id: Optional[int] = None
+    technician_id: Optional[int] = None
+    patient_name: Optional[str] = None
+    work_type: str
+    quantity: int = 1
+    deadline: str
+    description: Optional[str] = None
+    status: str = 'in_progress'
+
+
+@app.post("/api/sync/order-from-bot")
+async def sync_order_from_bot(order: SyncOrder):
+    """Принять заказ созданный в боте для синхронизации"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO orders (doctor_id, technician_id, patient_name, work_type, quantity, deadline, description, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (order.doctor_id, order.technician_id, order.patient_name, order.work_type,
+          order.quantity, order.deadline, order.description, order.status))
+    order_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"message": "ok", "order_id": order_id}
+
+
+@app.get("/api/sync/check")
+async def sync_check():
+    """Проверка что сервер жив"""
+    return {"status": "ok", "app": "stomapp-miniapp-1", "version": "2.0"}
 
 
 # Отчёты и статистика

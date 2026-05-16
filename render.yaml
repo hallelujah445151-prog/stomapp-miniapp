@@ -1,12 +1,14 @@
 services:
   - type: web
-    name: stomapp-backend
+    name: stomapp-miniapp-1
     env: python
     buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
     autoDeploy: true
     envVars:
+      - key: BOT_TOKEN
+        value: 8592737363:AAGK2R2KxJuGY9-RPZlBq2YBupKz0NAr0H8
       - key: ADMIN_SECRET_CODE
         value: endurance
     healthCheckPath: /
