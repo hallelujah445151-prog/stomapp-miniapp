@@ -77,49 +77,81 @@ def init_db():
 
 security = HTTPBearer()
 
-# Фоновая задача напоминаний (каждые 30 минут)
+# Фоновая задача напоминаний (каждые 5 минут, окно 10:00-10:30 МСК)
 async def reminder_background_task():
     """Проверяет заказы с дедлайном на завтра и шлёт уведомления в Telegram"""
     while True:
         try:
-            await asyncio.sleep(1800)  # 30 минут
+            await asyncio.sleep(300)  # 5 минут
             bot_token = os.getenv('BOT_TOKEN', '')
             if not bot_token:
                 continue
             
+            now_msk = datetime.utcnow() + timedelta(hours=3)  # МСК = UTC+3
+            current_time = now_msk.time()
+            current_date = now_msk.date()
+            
+            # Окно: 10:00-10:30 МСК
+            from datetime import time as dt_time
+            if current_time < dt_time(10, 0) or current_time > dt_time(10, 30):
+                continue
+            
             conn = get_connection()
             cursor = conn.cursor()
-            today = datetime.now()
-            tomorrow = (today + timedelta(days=1)).strftime('%Y-%m-%d')
+            tomorrow = (now_msk + timedelta(days=1)).strftime('%Y-%m-%d')
             
             cursor.execute("""
                 SELECT o.id, o.technician_id, o.patient_name, o.work_type, o.quantity, o.deadline,
-                       t.name as tech_name, t.telegram_id as tech_tg
+                       t.name as tech_name, t.telegram_id as tech_tg,
+                       d.name as doctor_name
                 FROM orders o
                 LEFT JOIN users t ON o.technician_id = t.id
+                LEFT JOIN users d ON o.doctor_id = d.id
                 WHERE o.deadline = ? AND o.status = 'in_progress'
                 AND NOT EXISTS (SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'tomorrow')
             """, (tomorrow,))
             
             rows = cursor.fetchall()
+            if not rows:
+                conn.close(); continue
+            
+            # Получаем всех админов
+            cursor.execute("SELECT telegram_id, name FROM users WHERE is_admin = 1 AND is_active = 1")
+            admins = cursor.fetchall()
             
             import httpx
-            for row in rows:
-                order_id, tech_id, patient, work, qty, deadline, tech_name, tech_tg = row
-                if tech_tg:
-                    msg = f"⏰ НАПОМИНАНИЕ!\n\n📋 Заказ #{order_id}\n👤 {patient or '—'}\n🔨 {work}\n📊 {qty} шт\n📅 Срок: {deadline}\n🔧 Исполнитель: {tech_name or '—'}"
-                    try:
-                        async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
+                for row in rows:
+                    order_id, tech_id, patient, work, qty, deadline, tech_name, tech_tg, doctor_name = row
+                    sent_any = False
+                    
+                    # Технику
+                    if tech_tg:
+                        msg = f"⏰ НАПОМИНАНИЕ О СРОКЕ!\n\n📋 Заказ #{order_id}\n👤 Пациент: {patient or '—'}\n👨‍⚕️ Врач: {doctor_name or '—'}\n🔨 Работа: {work}\n📊 Количество: {qty} шт\n📅 Срок: {deadline}"
+                        try:
                             await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={"chat_id": tech_tg, "text": msg})
+                            sent_any = True
+                            print(f"[REMINDER] Order #{order_id} → technician {tech_name}")
+                        except Exception as e:
+                            print(f"[REMINDER] Failed tech #{order_id}: {e}")
+                    
+                    # Всем админам
+                    for admin_tg, admin_name in admins:
+                        admin_msg = f"⏰ НАПОМИНАНИЕ О СРОКЕ!\n\n📋 Заказ #{order_id}\n👤 Пациент: {patient or '—'}\n👨‍⚕️ Врач: {doctor_name or '—'}\n🔧 Техник: {tech_name or '—'}\n🔨 Работа: {work}\n📊 Количество: {qty} шт\n📅 Срок: {deadline}"
+                        try:
+                            await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={"chat_id": admin_tg, "text": admin_msg})
+                            sent_any = True
+                            print(f"[REMINDER] Order #{order_id} → admin {admin_name}")
+                        except Exception as e:
+                            print(f"[REMINDER] Failed admin {admin_name}: {e}")
+                    
+                    if sent_any:
                         cursor.execute("INSERT OR IGNORE INTO reminders (order_id, reminder_type) VALUES (?, 'tomorrow')", (order_id,))
                         conn.commit()
-                        print(f"[REMINDER] Sent for order #{order_id} to tech {tech_name}")
-                    except Exception as e:
-                        print(f"[REMINDER] Failed order #{order_id}: {e}")
             
             conn.close()
         except Exception as e:
-            print(f"[REMINDER] Background task error: {e}")
+            print(f"[REMINDER] Task error: {e}")
 
 
 @asynccontextmanager
