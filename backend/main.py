@@ -710,6 +710,46 @@ async def sync_check():
     return {"status": "ok", "app": "stomapp-miniapp-1", "version": "2.0"}
 
 
+@app.post("/api/sync/restore-from-bot")
+async def restore_from_bot(data: dict):
+    """Восстановить БД из бота — вызывается ботом для полной синхронизации"""
+    if not data.get('secret') == 'endurance':
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    results = {"orders": 0, "users": 0}
+    
+    try:
+        if 'users' in data:
+            for u in data['users']:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO users (id, telegram_id, name, role, is_admin, is_active, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM users WHERE id=?), CURRENT_TIMESTAMP))
+                """, (u.get('id'), u.get('telegram_id'), u.get('name'), u.get('role'),
+                      u.get('is_admin', 0), u.get('is_active', 1), u.get('id')))
+                results['users'] += 1
+        
+        if 'orders' in data:
+            for o in data['orders']:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO orders (id, doctor_id, technician_id, patient_name, work_type,
+                        quantity, deadline, description, photo_id, created_at, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM orders WHERE id=?), CURRENT_TIMESTAMP), ?)
+                """, (o.get('id'), o.get('doctor_id'), o.get('technician_id'), o.get('patient_name'),
+                      o.get('work_type'), o.get('quantity', 1), o.get('deadline', ''),
+                      o.get('description'), o.get('photo_id'), o.get('id'), o.get('status', 'in_progress')))
+                results['orders'] += 1
+        
+        conn.commit()
+        conn.close()
+        return {"message": "ok", "restored": results}
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Напоминания (из ReminderService бота)
 @app.get("/api/reminders/upcoming")
 async def get_upcoming_deadlines(days: int = 3, current_user: dict = Depends(get_current_user)):
