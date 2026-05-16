@@ -163,13 +163,19 @@ const DashboardPage: React.FC = () => {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [reportType, setReportType] = useState('');
   const [reportData, setReportData] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [doctorFilter, setDoctorFilter] = useState(0);
+  const [technicianFilter, setTechnicianFilter] = useState(0);
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [technicians, setTechnicians] = useState<any[]>([]);
 
-  useEffect(() => {
-    apiService.getOrders().then(data => { setOrders(data); setOrdersLoading(false); }).catch(() => {
-      setOrders([{id:1,patient_name:'Иванов Иван',work_type:'Цирконевая коронка',quantity:3,deadline:'2026-05-20',created_at:'2026-05-14',status:'in_progress'},{id:2,patient_name:'Петров Петр',work_type:'Металлокерамическая коронка',quantity:1,deadline:'2026-05-25',created_at:'2026-05-10',status:'completed'},{id:3,patient_name:'Сидоров Алексей',work_type:'Ортодонтическая шина',quantity:2,deadline:'2026-05-22',created_at:'2026-05-16',status:'in_progress'}]);
-      setOrdersLoading(false);
-    });
-  }, []);
+  const loadOrdersFromApi = () => {
+    apiService.getOrders().then(data => setOrders(data)).catch(()=>{});
+  };
+
+  useEffect(() => { loadOrdersFromApi(); setOrdersLoading(false); }, []);
+  useEffect(() => { const i = setInterval(loadOrdersFromApi, 30000); return () => clearInterval(i); }, []);
+  useEffect(() => { apiService.getDoctors().then(setDoctors).catch(()=>{}); apiService.getTechnicians().then(setTechnicians).catch(()=>{}); }, []);
 
   const loadReport = async (type: string) => {
     setReportType(type);
@@ -199,7 +205,10 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const filteredOrders = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+  const filteredOrders = (filter === 'all' ? orders : orders.filter(o => o.status === filter))
+    .filter(o => !searchQuery || o.patient_name?.toLowerCase().includes(searchQuery.toLowerCase()) || o.work_type.toLowerCase().includes(searchQuery.toLowerCase()) || String(o.id).includes(searchQuery))
+    .filter(o => !doctorFilter || o.doctor_id === doctorFilter)
+    .filter(o => !technicianFilter || o.technician_id === technicianFilter);
 
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
@@ -296,6 +305,26 @@ const DashboardPage: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Поиск */}
+      <div style={{ marginBottom: '12px' }}>
+        <input type="text" placeholder="🔍 Поиск по пациенту, виду работ, номеру..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          style={{ width: '100%', padding: '10px 14px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' }} />
+      </div>
+
+      {/* Фильтр по врачу/технику (админ) */}
+      {user?.is_admin && (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          <select value={doctorFilter} onChange={e => setDoctorFilter(Number(e.target.value))} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }}>
+            <option value={0}>👨‍⚕️ Все врачи</option>
+            {doctors.map((d:any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+          <select value={technicianFilter} onChange={e => setTechnicianFilter(Number(e.target.value))} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }}>
+            <option value={0}>🔧 Все техники</option>
+            {technicians.map((t:any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
         </div>
       )}
 
@@ -463,8 +492,14 @@ const DashboardPage: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ fontSize: '13px', color: '#999', marginTop: '8px' }}>
-                💡 Нажмите для просмотра деталей
+              <div style={{ fontSize: '13px', color: '#999', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>💡 Нажмите для просмотра деталей</span>
+                {order.status === 'in_progress' && (
+                  <button onClick={(e) => { e.stopPropagation(); apiService.updateOrder(order.id, {status:'completed'}).then(() => loadOrdersFromApi()).catch(()=>{}); }}
+                    style={{ padding: '6px 14px', backgroundColor: '#4CAF50', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                    ✅ Готово
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -480,126 +515,49 @@ const OrderDetailsPage: React.FC = () => {
   const params = useParams();
   const { user } = useAuthStore();
   const orderId = params.id ? parseInt(params.id) : 1;
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const mockOrder: Order = {
-    id: orderId,
-    patient_name: 'Иванов Иван',
-    work_type: 'Цирконевая коронка на импланте',
-    quantity: 3,
-    deadline: '2026-05-20',
-    created_at: '2026-05-14',
-    status: 'in_progress',
-    description: 'Срочный заказ для пациента Иванов Иван. Необходимо выполнить работу к 20 мая.'
+  useEffect(() => { apiService.getOrder(orderId).then(setOrder).catch(()=>{}).finally(()=>setLoading(false)); }, [orderId]);
+
+  const markDone = async () => {
+    try { await apiService.updateOrder(orderId, { status: 'completed' }); alert('✅ Статус обновлён!'); navigate('/'); }
+    catch(e:any) { alert('Ошибка: '+ (e?.response?.data?.detail||e.message)); }
   };
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>⏳ Загрузка...</div>;
+  if (!order) return <div style={{ padding: 40, textAlign: 'center', color: '#c62828' }}>❌ Заказ не найден</div>;
 
   return (
     <div style={{ maxWidth: '600px', margin: '20px auto', padding: '20px' }}>
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '25px', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-      }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            marginBottom: '20px',
-            padding: '10px 15px',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
-            cursor: 'pointer'
-          }}
-        >
-          ← Назад
-        </button>
+      <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+        <button onClick={() => navigate('/')} style={{ marginBottom: '20px', padding: '10px 15px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>← Назад</button>
 
-        <h1 style={{ fontSize: '22px', marginBottom: '20px', color: '#333' }}>
-          📋 Заказ #{mockOrder.id}
-        </h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '22px', color: '#333', margin: 0 }}>📋 Заказ #{order.id}</h1>
+          <span style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', color: 'white', backgroundColor: order.status === 'in_progress' ? '#ff9800' : order.status === 'completed' ? '#4CAF50' : '#9e9e9e' }}>
+            {order.status === 'in_progress' ? '🔵 В работе' : order.status === 'completed' ? '✅ Выполнен' : '❌ Отменён'}
+          </span>
+        </div>
 
-        <div style={{ 
-          padding: '20px', 
-          backgroundColor: '#f8f9fa', 
-          borderRadius: '8px',
-          marginBottom: '20px' 
-        }}>
-          <div style={{ marginBottom: '15px', fontSize: '16px', fontWeight: '600', color: '#333' }}>
-            📊 Информация о заказе
-          </div>
-          
-          <div style={{ fontSize: '14px', lineHeight: '1.6', color: '#333' }}>
-            <div style={{ marginBottom: '10px' }}>
-              <strong>👤 Пациент:</strong> {mockOrder.patient_name}
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <strong>🔧 Вид работы:</strong> {mockOrder.work_type}
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <strong>📊 Количество:</strong> {mockOrder.quantity} шт.
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <strong>⏰ Дедлайн:</strong> {mockOrder.deadline}
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <strong>📅 Статус:</strong> {mockOrder.status === 'in_progress' ? '🔵 В работе' : '✅ Выполнено'}
-            </div>
-            <div style={{ marginTop: '10px', padding: '15px', backgroundColor: '#fff3e0', borderRadius: '6px' }}>
-              <strong>📝 Описание:</strong> {mockOrder.description}
-            </div>
+        <div style={{ padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '14px', lineHeight: '2' }}>
+            <div>👤 <strong>Пациент:</strong> {order.patient_name || 'Не указан'}</div>
+            <div>🔧 <strong>Вид работы:</strong> {order.work_type}</div>
+            <div>📊 <strong>Количество:</strong> {order.quantity} шт.</div>
+            <div>👨‍⚕️ <strong>Врач ID:</strong> {order.doctor_id || '—'}</div>
+            <div>🔧 <strong>Техник ID:</strong> {order.technician_id || '—'}</div>
+            <div>⏰ <strong>Дедлайн:</strong> {order.deadline}</div>
+            <div>📅 <strong>Создан:</strong> {order.created_at}</div>
+            {order.description && <div style={{ marginTop: '10px', padding: '12px', backgroundColor: '#fff3e0', borderRadius: '6px' }}>📝 <strong>Описание:</strong> {order.description}</div>}
           </div>
         </div>
 
-        {user?.role === 'technician' ? (
-          <div style={{ 
-            marginTop: '20px', 
-            padding: '15px', 
-            backgroundColor: '#e3f2fd', 
-            borderRadius: '8px',
-            textAlign: 'center' 
-          }}>
-            <div style={{ fontSize: '20px', marginBottom: '10px', color: '#1976D2' }}>
-              👤 Это ваш заказ!
-            </div>
-            <div style={{ fontSize: '14px', color: '#1976D2' }}>
-              Нажмите кнопку ниже для изменения статуса на "Выполнено"
-            </div>
-            <button
-              onClick={() => {
-                alert('Заказ выполнен!');
-                navigate('/dashboard');
-              }}
-              style={{
-                marginTop: '10px',
-                padding: '12px 20px',
-                backgroundColor: 'white',
-                color: '#1976D2',
-                border: '2px solid #1976D2',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              ✅ Отметить как выполнено
+        {order.status === 'in_progress' && (
+          <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', textAlign: 'center' }}>
+            <button onClick={markDone} style={{ padding: '14px 28px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' }}>
+              ✅ Отметить как выполненный
             </button>
-          </div>
-        ) : (
-          <div style={{ 
-            marginTop: '20px', 
-            padding: '15px', 
-            backgroundColor: '#e8f5e9', 
-            borderRadius: '8px',
-            textAlign: 'center' 
-          }}>
-            <div style={{ fontSize: '20px', marginBottom: '10px', color: '#4CAF50' }}>
-              ✅ Редактирование доступно
-            </div>
-            <div style={{ fontSize: '14px', color: '#1b5e20' }}>
-              Для {user?.role === 'admin' ? 'администраторов' : 'врачей'}
-            </div>
           </div>
         )}
       </div>
@@ -621,6 +579,7 @@ const CreateOrderPage: React.FC = () => {
     doctor_id: 0,
     technician_id: 0
   });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
 
@@ -636,7 +595,7 @@ const CreateOrderPage: React.FC = () => {
       return;
     }
     try {
-      await apiService.createOrder({
+      const result: any = await apiService.createOrder({
         doctor_id: formData.doctor_id,
         technician_id: formData.technician_id,
         patient_name: formData.patient_name,
@@ -645,6 +604,11 @@ const CreateOrderPage: React.FC = () => {
         deadline: formData.deadline,
         description: formData.description
       });
+      if (photoFile) {
+        const fd = new FormData(); fd.append('file', photoFile);
+        await apiService.uploadPhoto(result.order_id, fd);
+      }
+      try { await apiService.notifyOrderCreated({ order_id: result.order_id, technician_id: formData.technician_id }); } catch {}
       alert('Заказ создан!');
       navigate('/dashboard');
     } catch (e: any) {
@@ -855,6 +819,14 @@ const CreateOrderPage: React.FC = () => {
 
           {step === 3 && (
             <>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
+                  📸 Фото (необязательно)
+                </label>
+                <input type="file" accept="image/*" onChange={e => setPhotoFile(e.target.files?.[0] || null)}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }} />
+              </div>
+
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
                   📝 Описание

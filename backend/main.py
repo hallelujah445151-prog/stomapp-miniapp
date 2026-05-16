@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
@@ -618,6 +618,38 @@ if os.path.exists(STATIC_DIR):
         if os.path.exists(file_path):
             return FileResponse(file_path)
         return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+
+# Загрузка фото
+@app.post("/api/orders/{order_id}/photo")
+async def upload_photo(order_id: int, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """Загрузка фото к заказу"""
+    import uuid, shutil
+    ext = file.filename.split('.')[-1] if '.' in (file.filename or '') else 'jpg'
+    filename = f"order_{order_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    upload_dir = os.path.join(os.path.dirname(__file__), 'data', 'photos')
+    os.makedirs(upload_dir, exist_ok=True)
+    filepath = os.path.join(upload_dir, filename)
+    with open(filepath, 'wb') as f:
+        shutil.copyfileobj(file.file, f)
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE orders SET photo_id = ? WHERE id = ?", (filename, order_id))
+    conn.commit()
+    conn.close()
+    return {"message": "Фото загружено", "photo_id": filename}
+
+
+# Уведомление (заглушка — в продакшене через Telegram Bot API)
+@app.post("/api/notify/order-created")
+async def notify_order_created(order_data: dict, current_user: dict = Depends(get_current_user)):
+    """Отправить уведомление технику о новом заказе"""
+    # В продакшене здесь вызов Telegram Bot API
+    # Сейчас логируем и возвращаем OK
+    technician_id = order_data.get('technician_id')
+    order_id = order_data.get('order_id', '?')
+    print(f"[NOTIFY] Order #{order_id} assigned to technician #{technician_id}")
+    return {"message": f"Уведомление отправлено технику #{technician_id}"}
 
 
 # Отчёты и статистика

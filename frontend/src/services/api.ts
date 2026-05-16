@@ -51,7 +51,7 @@ export const apiService = {
     return response.data;
   },
 
-  async createOrder(order: OrderCreate): Promise<Order> {
+  async createOrder(order: OrderCreate): Promise<{order_id: number}> {
     const response = await api.post('/orders', order);
     return response.data;
   },
@@ -111,6 +111,16 @@ export const apiService = {
   async getReportsByTechnician(): Promise<{id:number,name:string,total:number,active:number,done:number}[]> {
     const response = await api.get('/reports/by-technician');
     return response.data;
+  },
+
+  // Photo upload
+  async uploadPhoto(orderId: number, formData: FormData): Promise<void> {
+    await api.post(`/orders/${orderId}/photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+
+  // Notifications
+  async notifyOrderCreated(data: {order_id: number, technician_id: number}): Promise<void> {
+    await api.post('/notify/order-created', data);
   }
 };
 
