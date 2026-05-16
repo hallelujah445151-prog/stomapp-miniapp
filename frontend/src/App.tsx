@@ -330,63 +330,32 @@ const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'white', borderRadius: '8px' }}>
-        <div style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
-          📊 Фильтры:
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setFilter('all')}
-            style={{
-              fontSize: '14px',
-              padding: '10px 20px',
-              backgroundColor: filter === 'all' ? '#229ED9' : '#fff',
-              color: filter === 'all' ? 'white' : '#333',
-              border: filter === 'all' ? '#2196F3' : '#ddd',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
-          >
-            📋 Все ({orders.length})
+      {/* Filters — Telegram-style segmented control */}
+      <div style={{ display: 'flex', gap: '0', marginBottom: '16px', background: '#e8e8e8', borderRadius: '10px', padding: '2px' }}>
+        {[['all','📋 Все'],['in_progress','🔵 В работе'],['completed','✅ Готово']].map(([k,v]) => (
+          <button key={k}
+            onClick={() => setFilter(k as any)}
+            style={{ flex: 1, padding: '8px 0', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: filter===k?600:400,
+              backgroundColor: filter===k?'#fff':'transparent', color: filter===k?'#222':'#888',
+              boxShadow: filter===k?'0 1px 2px rgba(0,0,0,.1)':'none', cursor: 'pointer', transition: 'all .15s' }}>
+            {v} <span style={{fontSize:11,opacity:.7}}>{filter===k?orders.length:''}</span>
           </button>
-          <button
-            onClick={() => setFilter('in_progress')}
-            style={{
-              fontSize: '14px',
-              padding: '10px 20px',
-              backgroundColor: filter === 'in_progress' ? '#229ED9' : '#fff',
-              color: filter === 'in_progress' ? 'white' : '#333',
-              border: filter === 'in_progress' ? '#2196F3' : '#ddd',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
-          >
-            🔵 В работе ({orders.filter(o => o.status === 'in_progress').length})
-          </button>
-          <button
-            onClick={() => setFilter('completed')}
-            style={{
-              fontSize: '14px',
-              padding: '10px 20px',
-              backgroundColor: filter === 'completed' ? '#229ED9' : '#fff',
-              color: filter === 'completed' ? 'white' : '#333',
-              border: filter === 'completed' ? '#2196F3' : '#ddd',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
-          >
-            ✅ Выполненные ({orders.filter(o => o.status === 'completed').length})
-          </button>
-        </div>
+        ))}
       </div>
 
       {/* Orders List */}
+      {/* Скелетон-загрузка */}
       {ordersLoading ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>⏳ Загрузка заказов...</div>
+        <div style={{ display: 'grid', gap: '10px' }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{ background: '#fff', borderRadius: '12px', padding: '16px', borderLeft: '4px solid #eee' }}>
+              <div style={{ width: '60%', height: '16px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', marginBottom: '10px' }} />
+              <div style={{ width: '80%', height: '13px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', marginBottom: '8px' }} />
+              <div style={{ width: '40%', height: '12px', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px' }} />
+            </div>
+          ))}
+          <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
+        </div>
       ) : filteredOrders.length === 0 ? (
         <div style={{ 
           textAlign: 'center', 
@@ -426,85 +395,37 @@ const DashboardPage: React.FC = () => {
             <div 
               key={order.id}
               onClick={() => handleOrderClick(order.id)}
-              style={{
-                backgroundColor: 'white',
-                padding: '15px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                border: order.status === 'in_progress' ? '2px solid #ff9800' : '1px solid #e0e0e0',
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                minHeight: '150px'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-              }}
+              style={{ backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,.08)', borderLeft: `4px solid ${order.status==='in_progress'?'#ff9800':order.status==='completed'?'#4caf50':'#9e9e9e'}`, cursor:'pointer', transition:'all .15s', overflow:'hidden' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.12)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.08)'}}
             >
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center' 
-                }}>
-                  <span style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
-                    Заказ #{order.id}
-                  </span>
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    backgroundColor: order.status === 'in_progress' ? '#ff9800' : order.status === 'completed' ? '#4CAF50' : '#6c757d',
-                    color: 'white',
-                    fontWeight: '500'
-                  }}>
-                    {order.status === 'in_progress' && '🔵 В работе'}
-                    {order.status === 'completed' && '✅ Выполнено'}
-                    '⏳ Ожидает'
-                  </span>
+            <div style={{padding:'14px 16px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:'16px',fontWeight:700,color:'#222',marginBottom:'2px'}}>#{order.id} — {order.work_type}</div>
+                  <div style={{fontSize:'13px',color:'#888'}}>👤 {order.patient_name||'Без пациента'} · 📦 {order.quantity} шт. · ⏰ {order.deadline}</div>
                 </div>
+                <span style={{padding:'3px 10px',borderRadius:'12px',fontSize:'11px',fontWeight:600,color:'#fff',backgroundColor:order.status==='in_progress'?'#ff9800':order.status==='completed'?'#4caf50':'#9e9e9e',whiteSpace:'nowrap',marginLeft:'8px'}}>
+                  {order.status==='in_progress'?'В работе':order.status==='completed'?'Готово':'Отменён'}
+                </span>
               </div>
-
-              <div style={{ fontSize: '14px', marginBottom: '8px', color: '#333' }}>
-                <div style={{ marginBottom: '4px' }}>
-                  👤 <strong>Пациент:</strong> {order.patient_name}
+              {(order.doctor_name||order.technician_name)&&(
+                <div style={{fontSize:'12px',color:'#aaa',marginBottom:'8px'}}>
+                  {(order.doctor_name?'👨‍⚕️'+order.doctor_name:'')+(order.doctor_name&&order.technician_name?' · ':'')+(order.technician_name?'🔧'+order.technician_name:'')}
                 </div>
-                <div style={{ marginBottom: '4px', color: '#666' }}>
-                  🔧 <strong>Работа:</strong> {order.work_type}
-                </div>
-                <div style={{ marginBottom: '4px', color: '#666' }}>
-                  📊 <strong>Количество:</strong> {order.quantity} шт.
-                </div>
-                <div style={{ marginBottom: '4px', color: '#666' }}>
-                  ⏰ <strong>Срок:</strong> {order.deadline}
-                </div>
-                {(order.doctor_name || order.technician_name) && (
-                  <div style={{ marginBottom: '4px', color: '#888', fontSize: '12px' }}>
-                    {order.doctor_name && <>👨‍⚕️ {order.doctor_name}</>}
-                    {order.doctor_name && order.technician_name && ' · '}
-                    {order.technician_name && <>🔧 {order.technician_name}</>}
-                  </div>
+              )}
+              {order.status==='in_progress'&&order.deadline<=new Date(Date.now()+2*864e5).toISOString().split('T')[0]&&(
+                <div style={{fontSize:'11px',color:'#e65100',background:'#fff3e0',padding:'4px 8px',borderRadius:'4px',display:'inline-block',marginBottom:'8px'}}>🔥 Срочно: {order.deadline}</div>
+              )}
+              <div style={{display:'flex',gap:'6px'}}>
+                {order.status==='in_progress'&&(
+                  <button onClick={e=>{e.stopPropagation();apiService.updateOrder(order.id,{status:'completed'}).then(()=>loadOrdersFromApi()).catch(()=>{})}}
+                    style={{padding:'6px 12px',fontSize:'12px',fontWeight:600,border:'none',borderRadius:'6px',background:'#4caf50',color:'#fff',cursor:'pointer'}}>✅ Готово</button>
                 )}
-                {order.status === 'in_progress' && order.deadline <= new Date(Date.now()+2*864e5).toISOString().split('T')[0] && (
-                  <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fff3e0', borderRadius: '4px', fontSize: '12px', color: '#ff5722' }}>
-                    🔥 Срочный заказ! Срок: {order.deadline}
-                  </div>
-                )}
+                <button onClick={e=>{e.stopPropagation();handleOrderClick(order.id)}}
+                  style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,border:'1px solid #ddd',borderRadius:'6px',background:'#fff',color:'#555',cursor:'pointer'}}>📋 Детали</button>
               </div>
-
-              <div style={{ fontSize: '13px', color: '#999', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>💡 Нажмите для просмотра деталей</span>
-                {order.status === 'in_progress' && (
-                  <button onClick={(e) => { e.stopPropagation(); apiService.updateOrder(order.id, {status:'completed'}).then(() => loadOrdersFromApi()).catch(()=>{}); }}
-                    style={{ padding: '6px 14px', backgroundColor: '#4CAF50', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
-                    ✅ Готово
-                  </button>
-                )}
-              </div>
+            </div>
             </div>
           ))}
         </div>
