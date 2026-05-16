@@ -34,8 +34,8 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.telegram_id) {
-      setErrorMsg('Введите Telegram ID');
+    if (!formData.telegram_id || isNaN(Number(formData.telegram_id)) || Number(formData.telegram_id) < 1) {
+      setErrorMsg('Введите корректный Telegram ID (число)');
       return;
     }
     
@@ -489,16 +489,9 @@ const DashboardPage: React.FC = () => {
                     {order.technician_name && <>🔧 {order.technician_name}</>}
                   </div>
                 )}
-                {order.status === 'in_progress' && (
-                  <div style={{ 
-                    marginTop: '8px', 
-                    padding: '8px', 
-                    backgroundColor: '#fff3e0', 
-                    borderRadius: '4px', 
-                    fontSize: '12px',
-                    color: '#ff5722'
-                  }}>
-                    🔥 Срочный заказ!
+                {order.status === 'in_progress' && order.deadline <= new Date(Date.now()+2*864e5).toISOString().split('T')[0] && (
+                  <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fff3e0', borderRadius: '4px', fontSize: '12px', color: '#ff5722' }}>
+                    🔥 Срочный заказ! Срок: {order.deadline}
                   </div>
                 )}
               </div>
@@ -603,6 +596,14 @@ const CreateOrderPage: React.FC = () => {
     e.preventDefault();
     if (!formData.doctor_id || !formData.technician_id || !formData.work_type || !formData.deadline) {
       alert('Заполните все обязательные поля: врач, техник, вид работы, срок');
+      return;
+    }
+    if (formData.quantity < 1 || formData.quantity > 100) {
+      alert('Количество должно быть от 1 до 100');
+      return;
+    }
+    if (formData.deadline < new Date().toISOString().split('T')[0]) {
+      alert('Срок выполнения не может быть в прошлом');
       return;
     }
     try {
@@ -965,6 +966,13 @@ function App() {
   const [autoLoginDone, setAutoLoginDone] = React.useState(false);
 
   React.useEffect(() => {
+    // Viewport height fix for mobile
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+    window.addEventListener('resize', () => {
+      document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+    });
+
     // Auto-login for Telegram users
     if (!localStorage.getItem('stomapp_user')) {
       const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
