@@ -190,6 +190,12 @@ const DashboardPage: React.FC = () => {
         setReportData(upcoming.length ? upcoming : null);
         if (!upcoming.length) alert('Нет срочных заказов');
       }
+      else if (type === 'overdue') {
+        apiService.getOverdueOrders().then(data => { setReportData(data.length ? data : null); if (!data.length) alert('Нет просроченных заказов'); }).catch(()=>{});
+      }
+      else if (type === 'workload') {
+        apiService.getWorkload().then(data => setReportData(data)).catch(()=>{});
+      }
     } catch(e: any) { alert('Ошибка загрузки: ' + (e?.response?.data?.detail || e.message)); }
   };
 
@@ -279,6 +285,8 @@ const DashboardPage: React.FC = () => {
             <button onClick={() => loadReport('doctors')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='doctors' ? '#1565c0' : '#fff', color: reportType==='doctors' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>👨‍⚕️ По врачам</button>
             <button onClick={() => loadReport('technicians')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='technicians' ? '#1565c0' : '#fff', color: reportType==='technicians' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>🔧 По техникам</button>
             <button onClick={() => loadReport('urgent')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='urgent' ? '#e65100' : '#fff', color: reportType==='urgent' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>🔥 Срочные</button>
+            <button onClick={() => loadReport('overdue')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='overdue' ? '#c62828' : '#fff', color: reportType==='overdue' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>⚠️ Просрочено</button>
+            <button onClick={() => loadReport('workload')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='workload' ? '#1565c0' : '#fff', color: reportType==='workload' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>📊 Загрузка</button>
           </div>
           {reportData && (
             <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -305,6 +313,17 @@ const DashboardPage: React.FC = () => {
                   <b>#{o.id}</b> {o.work_type} — пациент: {o.patient_name||'—'} | ⏰ {o.deadline}
                 </div>
               ))}
+              {reportType === 'overdue' && reportData && reportData.map((o: any) => (
+                <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '10px', marginBottom: '6px', backgroundColor: '#ffebee', borderRadius: '6px', border: '1px solid #ef9a9a', cursor: 'pointer', fontSize: '13px' }}>
+                  <b>#{o.id}</b> {o.work_type} — {o.technician_name||'—'} | ⚠️ {o.deadline} | {o.patient_name||'—'}
+                </div>
+              ))}
+              {reportType === 'workload' && (
+                <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                  <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Техник</th><th style={{ padding: '6px' }}>Активных</th><th style={{ padding: '6px' }}>Ближ. дедлайн</th></tr></thead>
+                  <tbody>{reportData.map((r: any) => <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px', color: r.active>3?'#c62828':'#1976d2', fontWeight:600 }}>{r.active}</td><td style={{ padding: '6px' }}>{r.next_deadline||'—'}</td></tr>)}</tbody>
+                </table>
+              )}
             </div>
           )}
         </div>

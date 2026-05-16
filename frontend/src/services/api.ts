@@ -121,6 +121,22 @@ export const apiService = {
   // Notifications
   async notifyOrderCreated(data: {order_id: number, technician_id: number}): Promise<void> {
     await api.post('/notify/order-created', data);
+  },
+
+  // Reminders
+  async getUpcomingReminders(days?: number): Promise<any[]> {
+    const response = await api.get('/reminders/upcoming', { params: { days: days || 3 } });
+    return response.data.reminders;
+  },
+  async getOverdueOrders(): Promise<any[]> {
+    const response = await api.get('/reminders/overdue');
+    return response.data.overdue;
+  },
+
+  // Workload
+  async getWorkload(): Promise<{id:number,name:string,active:number,next_deadline:string}[]> {
+    const response = await api.get('/reports/workload');
+    return response.data.workload;
   }
 };
 

@@ -710,6 +710,69 @@ async def sync_check():
     return {"status": "ok", "app": "stomapp-miniapp-1", "version": "2.0"}
 
 
+# Напоминания (из ReminderService бота)
+@app.get("/api/reminders/upcoming")
+async def get_upcoming_deadlines(days: int = 3, current_user: dict = Depends(get_current_user)):
+    """Заказы с дедлайном в ближайшие N дней"""
+    from datetime import datetime, timedelta
+    conn = get_connection()
+    cursor = conn.cursor()
+    today = datetime.now().strftime('%Y-%m-%d')
+    deadline = (datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d')
+    cursor.execute("""
+        SELECT o.*, d.name as doctor_name, t.name as technician_name
+        FROM orders o
+        LEFT JOIN users d ON o.doctor_id = d.id
+        LEFT JOIN users t ON o.technician_id = t.id
+        WHERE o.deadline BETWEEN ? AND ? AND o.status = 'in_progress'
+        ORDER BY o.deadline ASC
+    """, (today, deadline))
+    rows = cursor.fetchall()
+    conn.close()
+    return {"reminders": [{"id":r[0],"doctor_id":r[1],"technician_id":r[2],"patient_name":r[3],"work_type":r[4],"quantity":r[5],"deadline":r[6],"description":r[7],"status":r[10],"doctor_name":r[11],"technician_name":r[12]} for r in rows]}
+
+
+@app.get("/api/reminders/overdue")
+async def get_overdue_orders(current_user: dict = Depends(get_current_user)):
+    """Просроченные заказы (дедлайн прошёл, статус ещё в работе)"""
+    from datetime import datetime
+    conn = get_connection()
+    cursor = conn.cursor()
+    today = datetime.now().strftime('%Y-%m-%d')
+    cursor.execute("""
+        SELECT o.*, d.name as doctor_name, t.name as technician_name
+        FROM orders o
+        LEFT JOIN users d ON o.doctor_id = d.id
+        LEFT JOIN users t ON o.technician_id = t.id
+        WHERE o.deadline < ? AND o.status = 'in_progress'
+        ORDER BY o.deadline ASC
+    """, (today,))
+    rows = cursor.fetchall()
+    conn.close()
+    return {"overdue": [{"id":r[0],"doctor_id":r[1],"technician_id":r[2],"patient_name":r[3],"work_type":r[4],"quantity":r[5],"deadline":r[6],"description":r[7],"status":r[10],"doctor_name":r[11],"technician_name":r[12]} for r in rows]}
+
+
+# Расширенные отчёты (из ReportService бота)
+@app.get("/api/reports/workload")
+async def get_workload(current_user: dict = Depends(get_current_user)):
+    """Загрузка по техникам: активные заказы и ближайшие дедлайны"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT u.id, u.name,
+               COUNT(o.id) as active_orders,
+               MIN(o.deadline) as next_deadline
+        FROM users u
+        LEFT JOIN orders o ON o.technician_id = u.id AND o.status = 'in_progress'
+        WHERE u.role = 'technician' AND u.is_active = 1
+        GROUP BY u.id
+        ORDER BY active_orders DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return {"workload": [{"id":r[0],"name":r[1],"active":r[2],"next_deadline":r[3]} for r in rows]}
+
+
 # Отчёты и статистика
 @app.get("/api/reports/summary")
 async def get_summary(current_user: dict = Depends(get_current_user)):
