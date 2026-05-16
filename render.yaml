@@ -12,3 +12,7 @@ services:
       - key: ADMIN_SECRET_CODE
         value: endurance
     healthCheckPath: /
+    disk:
+      name: stomapp-db
+      mountPath: /app/backend/data
+      sizeGB: 1
