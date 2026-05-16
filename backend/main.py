@@ -206,36 +206,39 @@ async def get_orders(
     conn = get_connection()
     cursor = conn.cursor()
     
-    query = "SELECT * FROM orders"
+    query = """
+        SELECT o.id, o.doctor_id, o.technician_id, o.patient_name, o.work_type, 
+               o.quantity, o.deadline, o.description, o.photo_id, o.created_at, o.status,
+               d.name as doctor_name, t.name as technician_name
+        FROM orders o
+        LEFT JOIN users d ON o.doctor_id = d.id
+        LEFT JOIN users t ON o.technician_id = t.id
+    """
     params = []
+    conditions = []
     
     if status:
-        query += " WHERE status = ?"
+        conditions.append("o.status = ?")
         params.append(status)
-    elif technician_id:
-        query += " WHERE technician_id = ?"
+    if technician_id:
+        conditions.append("o.technician_id = ?")
         params.append(technician_id)
     
-    cursor.execute(query, params)
-    orders = cursor.fetchall()
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
     
+    query += " ORDER BY o.created_at DESC"
+    
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
     conn.close()
     
-    orders_list = []
-    for order in orders:
-        orders_list.append({
-            "id": order[0],
-            "doctor_id": order[1],
-            "technician_id": order[2],
-            "patient_name": order[3],
-            "work_type": order[4],
-            "quantity": order[5],
-            "deadline": order[6],
-            "description": order[7],
-            "photo_id": order[8],
-            "created_at": order[9],
-            "status": order[10]
-        })
+    orders_list = [{
+        "id": r[0], "doctor_id": r[1], "technician_id": r[2], "patient_name": r[3],
+        "work_type": r[4], "quantity": r[5], "deadline": r[6], "description": r[7],
+        "photo_id": r[8], "created_at": r[9], "status": r[10],
+        "doctor_name": r[11], "technician_name": r[12]
+    } for r in rows]
     
     return {"orders": orders_list}
 
@@ -268,26 +271,24 @@ async def get_order(order_id: int, current_user: dict = Depends(get_current_user
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
-    order = cursor.fetchone()
-    
+    cursor.execute("""
+        SELECT o.*, d.name as doctor_name, t.name as technician_name
+        FROM orders o
+        LEFT JOIN users d ON o.doctor_id = d.id
+        LEFT JOIN users t ON o.technician_id = t.id
+        WHERE o.id = ?
+    """, (order_id,))
+    r = cursor.fetchone()
     conn.close()
     
-    if not order:
-        raise HTTPException(status_code=404,         detail="Заказ не найден")
+    if not r:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
     
     return {
-        "id": order[0],
-        "doctor_id": order[1],
-        "technician_id": order[2],
-        "patient_name": order[3],
-        "work_type": order[4],
-        "quantity": order[5],
-        "deadline": order[6],
-        "description": order[7],
-        "photo_id": order[8],
-        "created_at": order[9],
-        "status": order[10]
+        "id": r[0], "doctor_id": r[1], "technician_id": r[2], "patient_name": r[3],
+        "work_type": r[4], "quantity": r[5], "deadline": r[6], "description": r[7],
+        "photo_id": r[8], "created_at": r[9], "status": r[10],
+        "doctor_name": r[11], "technician_name": r[12]
     }
 
 

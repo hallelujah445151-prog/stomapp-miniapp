@@ -170,7 +170,9 @@ const DashboardPage: React.FC = () => {
   const [technicians, setTechnicians] = useState<any[]>([]);
 
   const loadOrdersFromApi = () => {
-    apiService.getOrders().then(data => setOrders(data)).catch(()=>{});
+    apiService.getOrders().then(data => setOrders(data)).catch(()=>{
+      if (orders.length === 0) setOrders([{id:1,patient_name:'Нет связи с сервером',work_type:'Проверьте подключение',quantity:0,deadline:'—',created_at:'—',status:'in_progress'}]);
+    });
   };
 
   useEffect(() => { loadOrdersFromApi(); setOrdersLoading(false); }, []);
@@ -383,7 +385,9 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* Orders List */}
-      {filteredOrders.length === 0 ? (
+      {ordersLoading ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>⏳ Загрузка заказов...</div>
+      ) : filteredOrders.length === 0 ? (
         <div style={{ 
           textAlign: 'center', 
           padding: '60px',
@@ -476,8 +480,15 @@ const DashboardPage: React.FC = () => {
                   📊 <strong>Количество:</strong> {order.quantity} шт.
                 </div>
                 <div style={{ marginBottom: '4px', color: '#666' }}>
-                  ⏰ <strong>Дедлайн:</strong> {order.deadline}
+                  ⏰ <strong>Срок:</strong> {order.deadline}
                 </div>
+                {(order.doctor_name || order.technician_name) && (
+                  <div style={{ marginBottom: '4px', color: '#888', fontSize: '12px' }}>
+                    {order.doctor_name && <>👨‍⚕️ {order.doctor_name}</>}
+                    {order.doctor_name && order.technician_name && ' · '}
+                    {order.technician_name && <>🔧 {order.technician_name}</>}
+                  </div>
+                )}
                 {order.status === 'in_progress' && (
                   <div style={{ 
                     marginTop: '8px', 
@@ -520,9 +531,9 @@ const OrderDetailsPage: React.FC = () => {
 
   useEffect(() => { apiService.getOrder(orderId).then(setOrder).catch(()=>{}).finally(()=>setLoading(false)); }, [orderId]);
 
-  const markDone = async () => {
-    try { await apiService.updateOrder(orderId, { status: 'completed' }); alert('✅ Статус обновлён!'); navigate('/'); }
-    catch(e:any) { alert('Ошибка: '+ (e?.response?.data?.detail||e.message)); }
+  const markDone = () => {
+    if (!confirm('Отметить заказ как выполненный?')) return;
+    apiService.updateOrder(orderId, { status: 'completed' }).then(() => { navigate('/'); }).catch(() => alert('Ошибка'));
   };
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>⏳ Загрузка...</div>;
@@ -545,10 +556,10 @@ const OrderDetailsPage: React.FC = () => {
             <div>👤 <strong>Пациент:</strong> {order.patient_name || 'Не указан'}</div>
             <div>🔧 <strong>Вид работы:</strong> {order.work_type}</div>
             <div>📊 <strong>Количество:</strong> {order.quantity} шт.</div>
-            <div>👨‍⚕️ <strong>Врач ID:</strong> {order.doctor_id || '—'}</div>
-            <div>🔧 <strong>Техник ID:</strong> {order.technician_id || '—'}</div>
+            <div>👨‍⚕️ <strong>Врач:</strong> {order.doctor_name || order.doctor_id || '—'}</div>
+            <div>🔧 <strong>Техник:</strong> {order.technician_name || order.technician_id || '—'}</div>
             <div>⏰ <strong>Дедлайн:</strong> {order.deadline}</div>
-            <div>📅 <strong>Создан:</strong> {order.created_at}</div>
+            <div>📅 <strong>Создан:</strong> {new Date(order.created_at).toLocaleDateString('ru-RU')}</div>
             {order.description && <div style={{ marginTop: '10px', padding: '12px', backgroundColor: '#fff3e0', borderRadius: '6px' }}>📝 <strong>Описание:</strong> {order.description}</div>}
           </div>
         </div>
