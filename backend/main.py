@@ -15,16 +15,38 @@ from datetime import datetime, timedelta
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'basestom', 'src'))
 
 # Импортируем функции работы с БД
+def get_db_path():
+    """Путь к БД: локально = basestom/data/orders.db, Render = backend/data/orders.db"""
+    env_path = os.getenv('DB_PATH', '')
+    if env_path:
+        return env_path
+    # Локально: ищем basestom/data/orders.db
+    local_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'basestom', 'data', 'orders.db')
+    if os.path.exists(local_path):
+        return os.path.abspath(local_path)
+    # Fallback: своя копия
+    return os.path.join(os.path.dirname(__file__), 'data', 'orders.db')
+
+def get_references_path():
+    """Путь к справочникам"""
+    env_path = os.getenv('REFERENCES_PATH', '')
+    if env_path:
+        return env_path
+    local_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'basestom', 'data', 'references.json')
+    if os.path.exists(local_path):
+        return os.path.abspath(local_path)
+    return os.path.join(os.path.dirname(__file__), 'data', 'references.json')
+
 def get_connection():
     """Получение соединения с БД"""
     import sqlite3
-    DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'orders.db')
+    DB_PATH = get_db_path()
     return sqlite3.connect(DB_PATH)
 
 def init_db():
     """Инициализация БД"""
     import sqlite3
-    DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'orders.db')
+    DB_PATH = get_db_path()
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     
     conn = sqlite3.connect(DB_PATH)
@@ -469,7 +491,7 @@ async def get_technicians(current_user: dict = Depends(get_current_user)):
 async def get_work_types(current_user: dict = Depends(get_current_user)):
     """Получение справочника видов работ из references.json"""
     import json
-    references_path = os.path.join(os.path.dirname(__file__), 'data', 'references.json')
+    references_path = get_references_path()
     
     try:
         with open(references_path, 'r', encoding='utf-8') as f:
