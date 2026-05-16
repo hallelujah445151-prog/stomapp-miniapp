@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.concurrency import asynccontextmanager
 from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
 import os
 import sys
+import asyncio
 from datetime import datetime, timedelta
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'basestom', 'src'))
@@ -72,7 +74,64 @@ def init_db():
     conn.commit()
     conn.close()
 
-app = FastAPI(title="StomApp API", version="1.0.0")
+
+security = HTTPBearer()
+
+# Фоновая задача напоминаний (каждые 30 минут)
+async def reminder_background_task():
+    """Проверяет заказы с дедлайном на завтра и шлёт уведомления в Telegram"""
+    while True:
+        try:
+            await asyncio.sleep(1800)  # 30 минут
+            bot_token = os.getenv('BOT_TOKEN', '')
+            if not bot_token:
+                continue
+            
+            conn = get_connection()
+            cursor = conn.cursor()
+            today = datetime.now()
+            tomorrow = (today + timedelta(days=1)).strftime('%Y-%m-%d')
+            
+            cursor.execute("""
+                SELECT o.id, o.technician_id, o.patient_name, o.work_type, o.quantity, o.deadline,
+                       t.name as tech_name, t.telegram_id as tech_tg
+                FROM orders o
+                LEFT JOIN users t ON o.technician_id = t.id
+                WHERE o.deadline = ? AND o.status = 'in_progress'
+                AND NOT EXISTS (SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'tomorrow')
+            """, (tomorrow,))
+            
+            rows = cursor.fetchall()
+            
+            import httpx
+            for row in rows:
+                order_id, tech_id, patient, work, qty, deadline, tech_name, tech_tg = row
+                if tech_tg:
+                    msg = f"⏰ НАПОМИНАНИЕ!\n\n📋 Заказ #{order_id}\n👤 {patient or '—'}\n🔨 {work}\n📊 {qty} шт\n📅 Срок: {deadline}\n🔧 Исполнитель: {tech_name or '—'}"
+                    try:
+                        async with httpx.AsyncClient(timeout=10) as client:
+                            await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={"chat_id": tech_tg, "text": msg})
+                        cursor.execute("INSERT OR IGNORE INTO reminders (order_id, reminder_type) VALUES (?, 'tomorrow')", (order_id,))
+                        conn.commit()
+                        print(f"[REMINDER] Sent for order #{order_id} to tech {tech_name}")
+                    except Exception as e:
+                        print(f"[REMINDER] Failed order #{order_id}: {e}")
+            
+            conn.close()
+        except Exception as e:
+            print(f"[REMINDER] Background task error: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    task = asyncio.create_task(reminder_background_task())
+    print("Database initialized + reminder task started")
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="StomApp API", version="2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -81,15 +140,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-security = HTTPBearer()
-
-# Инициализация базы данных при старте приложения
-@app.on_event("startup")
-async def startup_event():
-    """Инициализация БД при запуске"""
-    init_db()
-    print("Database initialized successfully")
 
 
 class TelegramAuth(BaseModel):
