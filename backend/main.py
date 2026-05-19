@@ -673,6 +673,25 @@ async def update_personnel(
         raise HTTPException(status_code=500, detail=f"Ошибка при обновлении: {str(e)}")
 
 
+@app.delete("/api/personnel/{personnel_id}")
+async def delete_personnel(personnel_id: int, current_user: dict = Depends(get_current_user)):
+    """Удаление сотрудника (админом)"""
+    if current_user["role"] != "admin" and not current_user["is_admin"]:
+        raise HTTPException(status_code=403, detail="Только администраторы")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE id = ?", (personnel_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Сотрудник не найден")
+    cursor.execute("UPDATE orders SET technician_id = NULL WHERE technician_id = ?", (personnel_id,))
+    cursor.execute("UPDATE orders SET doctor_id = NULL WHERE doctor_id = ?", (personnel_id,))
+    cursor.execute("DELETE FROM users WHERE id = ?", (personnel_id,))
+    conn.commit()
+    conn.close()
+    return {"message": "Сотрудник удалён"}
+
+
 class PersonnelCreate(BaseModel):
     telegram_id: int
     name: str

@@ -191,17 +191,19 @@ export const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ role }
 
                 <button
                   className="button button-secondary"
-                  style={{
-                    padding: '8px 12px',
-                    fontSize: '13px'
-                  }}
-                  onClick={(e) => {
+                  style={{ padding: '8px 12px', fontSize: '13px' }}
+                  onClick={(e) => { e.stopPropagation(); loadPersonnelDetail(person.id); }}
+                >✏️</button>
+                <button
+                  className="button button-danger"
+                  style={{ padding: '8px 12px', fontSize: '13px' }}
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    loadPersonnelDetail(person.id);
+                    if (!confirm(`Удалить сотрудника «${person.name}»? Заказы останутся.`)) return;
+                    try { await apiService.deletePersonnel(person.id); loadPersonnel(); showToast('Сотрудник удалён', 'success'); }
+                    catch { showToast('Ошибка удаления', 'error'); }
                   }}
-                >
-                  ✏️
-                </button>
+                >🗑️</button>
               </div>
             </div>
           ))

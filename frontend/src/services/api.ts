@@ -99,6 +99,10 @@ export const apiService = {
     await api.put(`/personnel/${personnelId}`, personnel);
   },
 
+  async deletePersonnel(personnelId: number): Promise<void> {
+    await api.delete(`/personnel/${personnelId}`);
+  },
+
   // Reports
   async getReportsSummary(): Promise<{total:number,in_progress:number,completed:number,urgent:number}> {
     const response = await api.get('/reports/summary');
