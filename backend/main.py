@@ -759,29 +759,6 @@ async def get_photo(order_id: int):
     raise HTTPException(status_code=404, detail="Файл фото не найден")
 
 
-# Раздача статического фронтенда (для продакшена)
-STATIC_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs')
-
-if os.path.exists(STATIC_DIR):
-    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
-
-    @app.get("/")
-    async def root():
-        index_path = os.path.join(STATIC_DIR, "index.html")
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-        return {"message": "StomApp API is running", "version": "1.0.0"}
-
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404)
-        file_path = os.path.join(STATIC_DIR, full_path)
-        if os.path.exists(file_path):
-            return FileResponse(file_path)
-        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
-
-
 # Загрузка фото
 @app.post("/api/orders/{order_id}/photo")
 async def upload_photo(order_id: int, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
@@ -1071,6 +1048,29 @@ async def get_by_technician(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Раздача статического фронтенда (для продакшена — в конце, после всех API)
+STATIC_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs')
+
+if os.path.exists(STATIC_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+
+    @app.get("/")
+    async def root():
+        index_path = os.path.join(STATIC_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        return {"message": "StomApp API is running", "version": "2.0"}
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.exists(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 if __name__ == "__main__":
