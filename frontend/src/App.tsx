@@ -235,78 +235,53 @@ const DashboardPage: React.FC = () => {
     .filter(o => !technicianFilter || o.technician_id === technicianFilter);
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      {/* Header with user info and logout */}
+    <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '20px',
-        padding: '15px',
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: '16px', padding: '16px',
+        background: '#fff', borderRadius: '12px',
+        boxShadow: 'var(--shadow-1)', border: '1px solid var(--border-light)'
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '20px', color: '#333' }}>
-            📋 Мои заказы
-          </h1>
-          <p style={{ margin: '5px 0 0 0 15px', fontSize: '14px', color: '#666' }}>
-            Привет, {user?.name}! Роль: {user?.is_admin ? '👑 ' : ''}{user?.role === 'doctor' ? '👨‍⚕️ Врач' : user?.role === 'technician' ? '🔧 Техник' : '👤 Администратор'}
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 500, color: '#202124' }}>📋 Заказы</h1>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#5F6368' }}>
+            Привет, {user?.name}! {user?.is_admin ? '👑 ' : ''}{user?.role === 'doctor' ? '👨‍⚕️ Врач' : user?.role === 'technician' ? '🔧 Техник' : '👤 Администратор'}
           </p>
         </div>
-        
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {(user?.is_admin || user?.role === 'admin' || user?.role === 'doctor') && (
-            <button
-              onClick={(e) => { e.preventDefault(); handleCreateOrder(); }}
-              style={{ padding: '10px 20px', backgroundColor: '#229ED9', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: '600', boxShadow: '0 2px 4px rgba(34, 197, 94, 0.1)' }}
-            >➕ Новый</button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {(user?.is_admin || user?.role === 'admin') && (
+            <button onClick={e => { e.preventDefault(); handleCreateOrder(); }}
+              style={{ padding: '8px 18px', background: '#1A73E8', color: '#fff', border: 'none', borderRadius: '24px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>➕ Новый</button>
           )}
           {user?.is_admin && (
-            <button
-              onClick={(e) => { e.preventDefault(); navigate('/personnel'); }}
-              style={{ padding: '10px 20px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', fontWeight: '600' }}
-            >👥 Персонал</button>
+            <button onClick={e => { e.preventDefault(); navigate('/personnel'); }}
+              style={{ padding: '8px 18px', background: '#fff', color: '#1A73E8', border: '1px solid #DADCE0', borderRadius: '24px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>👥 Персонал</button>
           )}
-          <button
-            onClick={(e) => { e.preventDefault(); const tg=(window as any).Telegram?.WebApp; tg?tg.close():(window.history.length>1?window.history.back():window.close()); }}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#9e9e9e',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
-          >
-            ✕ Закрыть
-          </button>
+          <button onClick={(e) => { e.preventDefault(); const tg=(window as any).Telegram?.WebApp; if(tg){tg.close()}else{localStorage.removeItem('stomapp_user');window.location.href='/login'} }}
+            style={{ padding: '8px 18px', background: '#fff', color: '#5F6368', border: '1px solid #DADCE0', borderRadius: '24px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>✕</button>
         </div>
       </div>
 
-      {/* Admin: сводка + кнопки отчётов */}
+      {/* Admin: сводка */}
       {user?.is_admin && (
-        <div style={{ marginBottom: '15px' }}>
-          <div style={{ padding: '12px 15px', backgroundColor: '#e3f2fd', borderRadius: '8px', display: 'flex', gap: '15px', flexWrap: 'wrap', fontSize: '13px', alignItems: 'center' }}>
-            <span>📋 Всего: <b>{orders.length}</b></span>
-            <span>🔵 В работе: <b>{orders.filter(o=>o.status==='in_progress').length}</b></span>
-            <span>✅ Готово: <b>{orders.filter(o=>o.status==='completed').length}</b></span>
-            <span>🔥 Срочных: <b>{orders.filter(o=>o.status==='in_progress'&&o.deadline<=new Date(Date.now()+2*864e5).toISOString().split('T')[0]).length}</b></span>
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ padding: '12px 16px', background: '#E8F0FE', borderRadius: '12px', display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: '#202124', border: '1px solid #D2E3FC' }}>
+            <span>📋 <b>{orders.length}</b></span>
+            <span>🔵 <b>{orders.filter(o=>o.status==='in_progress').length}</b></span>
+            <span>✅ <b>{orders.filter(o=>o.status==='completed').length}</b></span>
+            <span>🔥 <b>{orders.filter(o=>o.status==='in_progress'&&o.deadline<=new Date(Date.now()+2*864e5).toISOString().split('T')[0]).length}</b></span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-            <button onClick={() => loadReport('urgent')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='urgent' ? '#e65100' : '#fff', color: reportType==='urgent' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>🔥 Срочные</button>
-            <button onClick={() => loadReport('overdue')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='overdue' ? '#c62828' : '#fff', color: reportType==='overdue' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>⚠️ Просрочено</button>
-            <button onClick={() => { setReportType(reportType==='reports'?'':'reports'); setReportData(null); }} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types') ? '#1565c0' : '#fff', color: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types') ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>📊 Отчеты</button>
+          <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap' }}>
+            <button onClick={() => loadReport('urgent')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='urgent'?'#FCE8E6':'#fff', color: reportType==='urgent'?'#C5221F':'#5F6368' }}>🔥 Срочные</button>
+            <button onClick={() => loadReport('overdue')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='overdue'?'#FCE8E6':'#fff', color: reportType==='overdue'?'#C5221F':'#5F6368' }}>⚠️ Просрочено</button>
+            <button onClick={() => { setReportType(reportType==='reports'?'':'reports'); setReportData(null); }} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types'||reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#1A73E8':'#fff', color: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types'||reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#fff':'#5F6368' }}>📊 Отчеты</button>
           </div>
           {reportType === 'reports' && (
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
-              <button onClick={() => loadReport('doctors')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='doctors'?'#1565c0':'#e3f2fd', color: reportType==='doctors'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='doctors'?600:400 }}>👨‍⚕️ По врачам</button>
-              <button onClick={() => loadReport('technicians')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='technicians'?'#1565c0':'#e3f2fd', color: reportType==='technicians'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='technicians'?600:400 }}>🔧 По техникам</button>
-              <button onClick={() => loadReport('work_types')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='work_types'?'#1565c0':'#e3f2fd', color: reportType==='work_types'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='work_types'?600:400 }}>📊 По видам работ</button>
-              <button onClick={() => { setReportType('period_type'); setReportData(null); }} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: (reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#1565c0':'#e3f2fd', color: (reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>📅 За период</button>
+              <button onClick={() => loadReport('doctors')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='doctors'?'#E8F0FE':'#fff', color: reportType==='doctors'?'#1A73E8':'#5F6368' }}>👨‍⚕️ По врачам</button>
+              <button onClick={() => loadReport('technicians')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='technicians'?'#E8F0FE':'#fff', color: reportType==='technicians'?'#1A73E8':'#5F6368' }}>🔧 По техникам</button>
+              <button onClick={() => loadReport('work_types')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='work_types'?'#E8F0FE':'#fff', color: reportType==='work_types'?'#1A73E8':'#5F6368' }}>📋 По видам работ</button>
+              <button onClick={() => { setReportType('period_type'); setReportData(null); }} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: (reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#E8F0FE':'#fff', color: (reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#1A73E8':'#5F6368' }}>📅 За период</button>
             </div>
           )}
           {reportType === 'period_type' && (
@@ -334,12 +309,12 @@ const DashboardPage: React.FC = () => {
             </div>
           )}
           {reportData && (
-            <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <b style={{ fontSize: '15px' }}>
-                  {reportType === 'doctors' ? '👨‍⚕️ Статистика по врачам' : reportType === 'technicians' ? '🔧 Статистика по техникам' : reportType === 'work_types' ? '📊 Статистика по видам работ' : '🔥 Срочные заказы'}
+            <div style={{ marginTop: '10px', padding: '16px', background: '#fff', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,.08)', border: '1px solid #E8EAED' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
+                <b style={{ fontSize: '14px', fontWeight: 500, color: '#202124' }}>
+                  {reportType === 'doctors' ? '👨‍⚕️ Статистика по врачам' : reportType === 'technicians' ? '🔧 Статистика по техникам' : reportType === 'work_types' ? '📋 Статистика по видам работ' : '🔥 Срочные заказы'}
                 </b>
-                <button onClick={() => { setReportData(null); setReportType(''); }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+                <button onClick={() => { setReportData(null); setReportType(''); }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#5F6368' }}>✕</button>
               </div>
               {reportType === 'doctors' && (
                 <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
@@ -412,32 +387,31 @@ const DashboardPage: React.FC = () => {
       {/* Поиск */}
       <div style={{ marginBottom: '12px' }}>
         <input type="text" placeholder="🔍 Поиск по пациенту, виду работ, номеру..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-          style={{ width: '100%', padding: '10px 14px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' }} />
+          style={{ width: '100%', padding: '12px 16px', border: '1px solid #DADCE0', borderRadius: '12px', fontSize: '14px', background: '#fff', outline: 'none' }} />
       </div>
 
       {/* Фильтр по врачу/технику (админ) */}
       {user?.is_admin && (
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          <select value={doctorFilter} onChange={e => setDoctorFilter(Number(e.target.value))} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <select value={doctorFilter} onChange={e => setDoctorFilter(Number(e.target.value))} style={{ flex: 1, padding: '8px 12px', border: '1px solid #DADCE0', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>
             <option value={0}>👨‍⚕️ Все врачи</option>
             {doctors.map((d:any) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          <select value={technicianFilter} onChange={e => setTechnicianFilter(Number(e.target.value))} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }}>
+          <select value={technicianFilter} onChange={e => setTechnicianFilter(Number(e.target.value))} style={{ flex: 1, padding: '8px 12px', border: '1px solid #DADCE0', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>
             <option value={0}>🔧 Все техники</option>
             {technicians.map((t:any) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
       )}
 
-      {/* Filters — Telegram-style segmented control */}
-      <div style={{ display: 'flex', gap: '0', marginBottom: '16px', background: '#e8e8e8', borderRadius: '10px', padding: '2px' }}>
-        {[['all','📋 Все'],['in_progress','🔵 В работе'],['completed','✅ Готово']].map(([k,v]) => (
-          <button key={k}
-            onClick={() => setFilter(k as any)}
-            style={{ flex: 1, padding: '8px 0', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: filter===k?600:400,
-              backgroundColor: filter===k?'#fff':'transparent', color: filter===k?'#222':'#888',
-              boxShadow: filter===k?'0 1px 2px rgba(0,0,0,.1)':'none', cursor: 'pointer', transition: 'all .15s' }}>
-            {v} <span style={{fontSize:11,opacity:.7}}>{filter===k?orders.length:''}</span>
+      {/* Filters — Material segmented control */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: '16px', background: '#F1F3F4', borderRadius: '12px', padding: '3px' }}>
+        {[['all','Все'],['in_progress','В работе'],['completed','Готово']].map(([k,v]) => (
+          <button key={k} onClick={() => setFilter(k as any)}
+            style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: filter===k?500:400,
+              background: filter===k?'#fff':'transparent', color: filter===k?'#1A73E8':'#5F6368',
+              boxShadow: filter===k?'0 1px 2px rgba(0,0,0,.08)':'none', cursor: 'pointer', transition: 'all .15s' }}>
+            {v} <span style={{fontSize:11,marginLeft:2,opacity:.7}}>{orders.filter(o=>k==='all'?true:o.status===k).length}</span>
           </button>
         ))}
       </div>
@@ -494,35 +468,37 @@ const DashboardPage: React.FC = () => {
             <div 
               key={order.id}
               onClick={() => handleOrderClick(order.id)}
-              style={{ backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,.08)', borderLeft: `4px solid ${order.status==='in_progress'?'#ff9800':order.status==='completed'?'#4caf50':'#9e9e9e'}`, cursor:'pointer', transition:'all .15s', overflow:'hidden' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.12)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.08)'}}
+              style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,.08)', borderLeft: `4px solid ${order.status==='in_progress'?'#FBBC04':order.status==='completed'?'#34A853':'#DADCE0'}`, cursor:'pointer', transition:'box-shadow .15s', overflow:'hidden', border: '1px solid #E8EAED', borderLeftWidth: '4px' }}
+              onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.12)'}}
+              onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 1px 2px rgba(0,0,0,.08)'}}
             >
             <div style={{padding:'14px 16px'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'8px'}}>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:'16px',fontWeight:700,color:'#222',marginBottom:'2px'}}>#{order.id} — {order.work_type}</div>
-                  <div style={{fontSize:'13px',color:'#888'}}>👤 {order.patient_name||'Без пациента'} · 📦 {order.quantity} шт. · ⏰ {order.deadline}</div>
+                  <div style={{fontSize:'15px',fontWeight:500,color:'#202124',marginBottom:'2px'}}>#{order.id} — {order.work_type}</div>
+                  <div style={{fontSize:'12px',color:'#5F6368'}}>👤 {order.patient_name||'Без пациента'} · 📦 {order.quantity} шт. · ⏰ {order.deadline}</div>
                 </div>
-                <span style={{padding:'3px 10px',borderRadius:'12px',fontSize:'11px',fontWeight:600,color:'#fff',backgroundColor:order.status==='in_progress'?'#ff9800':order.status==='completed'?'#4caf50':'#9e9e9e',whiteSpace:'nowrap',marginLeft:'8px'}}>
+                <span style={{padding:'3px 10px',borderRadius:'12px',fontSize:'11px',fontWeight:500,color:'#fff',background:order.status==='in_progress'?'#FBBC04':order.status==='completed'?'#34A853':'#DADCE0',whiteSpace:'nowrap',marginLeft:'8px'}}>
                   {order.status==='in_progress'?'В работе':order.status==='completed'?'Готово':'Отменён'}
                 </span>
               </div>
               {(order.doctor_name||order.technician_name)&&(
-                <div style={{fontSize:'12px',color:'#aaa',marginBottom:'8px'}}>
-                  {(order.doctor_name?'👨‍⚕️'+order.doctor_name:'')+(order.doctor_name&&order.technician_name?' · ':'')+(order.technician_name?'🔧'+order.technician_name:'')}
+                <div style={{fontSize:'11px',color:'#80868B',marginBottom:'8px'}}>
+                  {order.doctor_name&&<>👨‍⚕️{order.doctor_name}</>}{(order.doctor_name&&order.technician_name)&&' · '}{order.technician_name&&<>🔧{order.technician_name}</>}
                 </div>
               )}
-              {order.status==='in_progress'&&order.deadline<=new Date(Date.now()+2*864e5).toISOString().split('T')[0]&&(
-                <div style={{fontSize:'11px',color:'#e65100',background:'#fff3e0',padding:'4px 8px',borderRadius:'4px',display:'inline-block',marginBottom:'8px'}}>🔥 Срочно: {order.deadline}</div>
-              )}
-              <div style={{display:'flex',gap:'6px'}}>
+              {order.status==='in_progress' && order.deadline < new Date().toISOString().split('T')[0] ? (
+                <div style={{fontSize:'11px',color:'#C5221F',background:'#FCE8E6',padding:'4px 8px',borderRadius:'8px',display:'inline-block',marginBottom:'8px'}}>⚠️ Просрочено: {order.deadline}</div>
+              ) : order.status==='in_progress' && order.deadline <= new Date(Date.now()+2*864e5).toISOString().split('T')[0] ? (
+                <div style={{fontSize:'11px',color:'#E37400',background:'#FEF7E0',padding:'4px 8px',borderRadius:'8px',display:'inline-block',marginBottom:'8px'}}>🔥 Срочно: {order.deadline}</div>
+              ) : null}
+              <div style={{display:'flex',gap:'6px',marginTop:'4px'}}>
                 {order.status==='in_progress'&&(
                   <button onClick={e=>{e.stopPropagation();apiService.updateOrder(order.id,{status:'completed'}).then(()=>loadOrdersFromApi()).catch(()=>{})}}
-                    style={{padding:'6px 12px',fontSize:'12px',fontWeight:600,border:'none',borderRadius:'6px',background:'#4caf50',color:'#fff',cursor:'pointer'}}>✅ Готово</button>
+                    style={{padding:'5px 14px',fontSize:'12px',fontWeight:500,border:'none',borderRadius:'24px',background:'#34A853',color:'#fff',cursor:'pointer'}}>✅ Готово</button>
                 )}
                 <button onClick={e=>{e.stopPropagation();handleOrderClick(order.id)}}
-                  style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,border:'1px solid #ddd',borderRadius:'6px',background:'#fff',color:'#555',cursor:'pointer'}}>📋 Детали</button>
+                  style={{padding:'5px 14px',fontSize:'12px',fontWeight:500,border:'1px solid #DADCE0',borderRadius:'24px',background:'#fff',color:'#5F6368',cursor:'pointer'}}>📋 Детали</button>
               </div>
             </div>
             </div>
