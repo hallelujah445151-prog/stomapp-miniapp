@@ -2,15 +2,23 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.concurrency import asynccontextmanager
 from pydantic import BaseModel
 from typing import Optional, List
 import sqlite3
 import os
 import sys
+import io
 import asyncio
 from datetime import datetime, timedelta
+
+# Загрузка .env локально
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'basestom', '.env'))
+except ImportError:
+    pass
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'basestom', 'src'))
 
@@ -702,6 +710,36 @@ async def create_personnel(
         raise HTTPException(status_code=500, detail=f"Ошибка при создании сотрудника: {str(e)}")
 
 
+# Раздача фото (до catch-all, иначе перехватывается)
+@app.get("/api/orders/{order_id}/photo")
+async def get_photo(order_id: int):
+    """Получить фото заказа (локальное или Telegram)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT photo_id FROM orders WHERE id = ?", (order_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row or not row[0]:
+        raise HTTPException(status_code=404, detail="Фото не найдено")
+    photo_id = row[0]
+    photo_path = os.path.join(os.path.dirname(__file__), 'data', 'photos', photo_id)
+    if os.path.exists(photo_path):
+        return FileResponse(photo_path)
+    bot_token = os.getenv('BOT_TOKEN', '')
+    if bot_token:
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.get(f"https://api.telegram.org/bot{bot_token}/getFile?file_id={photo_id}")
+                data = r.json()
+                fp = data.get('result', {}).get('file_path')
+                if fp:
+                    img = await client.get(f"https://api.telegram.org/file/bot{bot_token}/{fp}")
+                    return StreamingResponse(io.BytesIO(img.content), media_type=img.headers.get('content-type','image/jpeg'))
+        except Exception: pass
+    raise HTTPException(status_code=404, detail="Файл фото не найден")
+
+
 # Раздача статического фронтенда (для продакшена)
 STATIC_DIR = os.path.join(os.path.dirname(__file__), '..', 'docs')
 
@@ -748,36 +786,49 @@ async def upload_photo(order_id: int, file: UploadFile = File(...), current_user
 # Уведомление — отправка через Telegram Bot API
 @app.post("/api/notify/order-created")
 async def notify_order_created(order_data: dict, current_user: dict = Depends(get_current_user)):
-    """Отправить уведомление технику о новом заказе"""
+    """Отправить уведомление технику и врачу о новом заказе"""
     technician_id = order_data.get('technician_id')
+    doctor_id = order_data.get('doctor_id')
     order_id = order_data.get('order_id', '?')
+    work_type = order_data.get('work_type', '?')
+    conn = get_connection()
+    cursor = conn.cursor()
+    sent = []
     
-    if technician_id:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT telegram_id, name FROM users WHERE id = ? AND is_active = 1", (technician_id,))
-        tech = cursor.fetchone()
-        conn.close()
-        
-        if tech:
-            import httpx
-            bot_token = os.getenv('BOT_TOKEN', '')
-            if bot_token:
+    import httpx
+    bot_token = os.getenv('BOT_TOKEN', '')
+    if not bot_token:
+        conn.close(); return {"message": "BOT_TOKEN not set", "sent": False}
+    
+    async with httpx.AsyncClient(timeout=10) as client:
+        # Технику
+        if technician_id:
+            cursor.execute("SELECT telegram_id, name FROM users WHERE id = ? AND is_active = 1", (technician_id,))
+            tech = cursor.fetchone()
+            if tech:
                 try:
-                    async with httpx.AsyncClient(timeout=10) as client:
-                        await client.post(
-                            f"https://api.telegram.org/bot{bot_token}/sendMessage",
-                            json={
-                                "chat_id": tech[0],
-                                "text": f"🔔 Новый заказ #{order_id}!\n\nВид работы назначен на вас.\nПроверьте приложение: https://stomapp-miniapp-1.onrender.com/order/{order_id}",
-                                "parse_mode": "HTML"
-                            }
-                        )
-                    return {"message": f"Уведомление отправлено технику {tech[1]}"}
-                except Exception as e:
-                    return {"message": f"Отправка не удалась: {e}", "sent": False}
+                    await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
+                        "chat_id": tech[0],
+                        "text": f"🔔 Новый заказ #{order_id}!\n\n🔨 {work_type}\nНазначен вам.\n📅 Проверьте: https://stomapp-miniapp-1.onrender.com/order/{order_id}"
+                    })
+                    sent.append(f"технику {tech[1]}")
+                except Exception: pass
+        
+        # Врачу
+        if doctor_id:
+            cursor.execute("SELECT telegram_id, name FROM users WHERE id = ? AND is_active = 1", (doctor_id,))
+            doc = cursor.fetchone()
+            if doc:
+                try:
+                    await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
+                        "chat_id": doc[0],
+                        "text": f"🔔 Ваш заказ #{order_id} принят в работу!\n\n🔨 {work_type}\n📅 Следите за статусом: https://stomapp-miniapp-1.onrender.com/order/{order_id}"
+                    })
+                    sent.append(f"врачу {doc[1]}")
+                except Exception: pass
     
-    return {"message": "Техник не найден или бот не настроен", "sent": False}
+    conn.close()
+    return {"message": f"Уведомления отправлены: {', '.join(sent)}" if sent else "Некому отправлять", "sent": len(sent) > 0}
 
 
 # Синхронизация — эндпоинт для бота
@@ -915,6 +966,24 @@ async def get_workload(current_user: dict = Depends(get_current_user)):
     rows = cursor.fetchall()
     conn.close()
     return {"workload": [{"id":r[0],"name":r[1],"active":r[2],"next_deadline":r[3]} for r in rows]}
+
+
+@app.get("/api/reports/by-work-type")
+async def get_by_work_type(current_user: dict = Depends(get_current_user)):
+    """Статистика по видам работ"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT work_type, COUNT(*) as total,
+               SUM(CASE WHEN status='in_progress' THEN 1 ELSE 0 END) as active,
+               SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as done
+        FROM orders
+        GROUP BY work_type
+        ORDER BY total DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return {"work_types": [{"name":r[0],"total":r[1],"active":r[2],"done":r[3]} for r in rows]}
 
 
 # Отчёты и статистика

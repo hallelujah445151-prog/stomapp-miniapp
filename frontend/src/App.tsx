@@ -49,7 +49,8 @@ const LoginPage: React.FC = () => {
         id: result.user.id,
         name: result.user.name,
         telegram_id: String(result.user.telegram_id),
-        role: result.user.role
+        role: result.user.role,
+        is_admin: result.user.is_admin
       });
     } catch (err: any) {
       const msg = err?.response?.data?.detail || 'Ошибка входа. Проверьте Telegram ID.';
@@ -197,6 +198,9 @@ const DashboardPage: React.FC = () => {
       else if (type === 'workload') {
         apiService.getWorkload().then(data => setReportData(data)).catch(()=>{});
       }
+      else if (type === 'work_types') {
+        apiService.getByWorkType().then(data => setReportData(data)).catch(()=>{});
+      }
     } catch(e: any) { alert('Ошибка загрузки: ' + (e?.response?.data?.detail || e.message)); }
   };
 
@@ -282,17 +286,23 @@ const DashboardPage: React.FC = () => {
             <span>🔥 Срочных: <b>{orders.filter(o=>o.status==='in_progress'&&o.deadline<=new Date(Date.now()+2*864e5).toISOString().split('T')[0]).length}</b></span>
           </div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-            <button onClick={() => loadReport('doctors')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='doctors' ? '#1565c0' : '#fff', color: reportType==='doctors' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>👨‍⚕️ По врачам</button>
-            <button onClick={() => loadReport('technicians')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='technicians' ? '#1565c0' : '#fff', color: reportType==='technicians' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>🔧 По техникам</button>
             <button onClick={() => loadReport('urgent')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='urgent' ? '#e65100' : '#fff', color: reportType==='urgent' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>🔥 Срочные</button>
             <button onClick={() => loadReport('overdue')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='overdue' ? '#c62828' : '#fff', color: reportType==='overdue' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>⚠️ Просрочено</button>
-            <button onClick={() => loadReport('workload')} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: reportType==='workload' ? '#1565c0' : '#fff', color: reportType==='workload' ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>📊 Загрузка</button>
+            <button onClick={() => { setReportType(reportType==='reports'?'':'reports'); setReportData(null); }} style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types') ? '#1565c0' : '#fff', color: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types') ? '#fff' : '#333', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer' }}>📊 Отчеты</button>
           </div>
+          {reportType === 'reports' && (
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+              <button onClick={() => loadReport('doctors')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='doctors'?'#1565c0':'#e3f2fd', color: reportType==='doctors'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='doctors'?600:400 }}>👨‍⚕️ По врачам</button>
+              <button onClick={() => loadReport('technicians')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='technicians'?'#1565c0':'#e3f2fd', color: reportType==='technicians'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='technicians'?600:400 }}>🔧 По техникам</button>
+              <button onClick={() => loadReport('work_types')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='work_types'?'#1565c0':'#e3f2fd', color: reportType==='work_types'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='work_types'?600:400 }}>📊 По видам работ</button>
+              <button onClick={() => { alert('Отчет за период — в разработке'); }} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#e3f2fd', color: '#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>📅 За период</button>
+            </div>
+          )}
           {reportData && (
             <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <b style={{ fontSize: '15px' }}>
-                  {reportType === 'doctors' ? '👨‍⚕️ Статистика по врачам' : reportType === 'technicians' ? '🔧 Статистика по техникам' : '🔥 Срочные заказы'}
+                  {reportType === 'doctors' ? '👨‍⚕️ Статистика по врачам' : reportType === 'technicians' ? '🔧 Статистика по техникам' : reportType === 'work_types' ? '📊 Статистика по видам работ' : '🔥 Срочные заказы'}
                 </b>
                 <button onClick={() => { setReportData(null); setReportType(''); }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
               </div>
@@ -322,6 +332,12 @@ const DashboardPage: React.FC = () => {
                 <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
                   <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Техник</th><th style={{ padding: '6px' }}>Активных</th><th style={{ padding: '6px' }}>Ближ. дедлайн</th></tr></thead>
                   <tbody>{reportData.map((r: any) => <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px', color: r.active>3?'#c62828':'#1976d2', fontWeight:600 }}>{r.active}</td><td style={{ padding: '6px' }}>{r.next_deadline||'—'}</td></tr>)}</tbody>
+                </table>
+              )}
+              {reportType === 'work_types' && (
+                <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                  <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Вид работы</th><th style={{ padding: '6px' }}>Всего</th><th style={{ padding: '6px' }}>В работе</th><th style={{ padding: '6px' }}>Готово</th></tr></thead>
+                  <tbody>{reportData.map((r: any) => <tr key={r.name} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px' }}>{r.total}</td><td style={{ padding: '6px', color: '#1976d2' }}>{r.active}</td><td style={{ padding: '6px', color: '#388e3c' }}>{r.done}</td></tr>)}</tbody>
                 </table>
               )}
             </div>
@@ -453,6 +469,14 @@ const DashboardPage: React.FC = () => {
   );
 };
 
+// Photo loader
+const OrderPhotoInline: React.FC<{orderId: number}> = ({orderId}) => (
+  <div style={{marginTop:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:8,color:'#555'}}>📸 Фото:</div>
+    <img src={`/api/orders/${orderId}/photo`} alt="Фото" style={{width:'100%',maxHeight:300,objectFit:'contain',borderRadius:8,border:'1px solid #e0e0e0'}}
+      onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+  </div>
+);
+
 // Order Details Page
 const OrderDetailsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -494,6 +518,7 @@ const OrderDetailsPage: React.FC = () => {
             <div>⏰ <strong>Дедлайн:</strong> {order.deadline}</div>
             <div>📅 <strong>Создан:</strong> {new Date(order.created_at).toLocaleDateString('ru-RU')}</div>
             {order.description && <div style={{ marginTop: '10px', padding: '12px', backgroundColor: '#fff3e0', borderRadius: '6px' }}>📝 <strong>Описание:</strong> {order.description}</div>}
+            {order.photo_id && <OrderPhotoInline orderId={order.id} />}
           </div>
         </div>
 
@@ -560,7 +585,7 @@ const CreateOrderPage: React.FC = () => {
         const fd = new FormData(); fd.append('file', photoFile);
         await apiService.uploadPhoto(result.order_id, fd);
       }
-      try { await apiService.notifyOrderCreated({ order_id: result.order_id, technician_id: formData.technician_id }); } catch {}
+      try { await apiService.notifyOrderCreated({ order_id: result.order_id, technician_id: formData.technician_id, doctor_id: formData.doctor_id, work_type: formData.work_type }); } catch {}
       alert('Заказ создан!');
       navigate('/dashboard');
     } catch (e: any) {

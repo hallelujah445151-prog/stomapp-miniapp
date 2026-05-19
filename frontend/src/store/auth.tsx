@@ -33,8 +33,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedUser = localStorage.getItem('stomapp_user');
     if (savedUser) {
       try {
-        const userData = JSON.parse(savedUser) as User;
-        setUser(userData);
+        const userData = JSON.parse(savedUser);
+        if (userData.is_admin === undefined) {
+          localStorage.removeItem('stomapp_user');
+          window.location.reload();
+          return;
+        }
+        setUser(userData as User);
         setIsAuthenticated(true);
       } catch (e) {
         console.error('Error loading user:', e);

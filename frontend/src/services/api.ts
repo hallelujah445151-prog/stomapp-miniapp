@@ -119,7 +119,7 @@ export const apiService = {
   },
 
   // Notifications
-  async notifyOrderCreated(data: {order_id: number, technician_id: number}): Promise<void> {
+  async notifyOrderCreated(data: Record<string, any>): Promise<void> {
     await api.post('/notify/order-created', data);
   },
 
@@ -137,6 +137,11 @@ export const apiService = {
   async getWorkload(): Promise<{id:number,name:string,active:number,next_deadline:string}[]> {
     const response = await api.get('/reports/workload');
     return response.data.workload;
+  },
+
+  async getByWorkType(): Promise<{name:string,total:number,active:number,done:number}[]> {
+    const response = await api.get('/reports/by-work-type');
+    return response.data.work_types;
   }
 };
 
