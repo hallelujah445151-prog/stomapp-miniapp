@@ -982,7 +982,65 @@ async def get_by_work_type(current_user: dict = Depends(get_current_user)):
     return {"work_types": [{"name":r[0],"total":r[1],"active":r[2],"done":r[3]} for r in rows]}
 
 
-# Отчёты и статистика
+# Отчёты за период
+@app.get("/api/reports/period")
+async def get_period_report(
+    report_type: str = "all",
+    start: str = "",
+    end: str = "",
+    current_user: dict = Depends(get_current_user)
+):
+    """Отчёт за период: all / doctors / technicians / work_types"""
+    if not start or not end:
+        raise HTTPException(status_code=400, detail="Укажите start и end (YYYY-MM-DD)")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    result = {"period": {"start": start, "end": end}, "type": report_type}
+    
+    try:
+        if report_type in ("all", "doctors"):
+            cursor.execute("""
+                SELECT u.id, u.name,
+                       COUNT(o.id) as total,
+                       SUM(CASE WHEN o.status='in_progress' THEN 1 ELSE 0 END) as active,
+                       SUM(CASE WHEN o.status='completed' THEN 1 ELSE 0 END) as done
+                FROM users u LEFT JOIN orders o ON o.doctor_id = u.id
+                    AND o.created_at BETWEEN ? AND ?
+                WHERE u.role = 'doctor' AND u.is_active = 1
+                GROUP BY u.id ORDER BY total DESC
+            """, (start, end))
+            result["doctors"] = [{"id":r[0],"name":r[1],"total":r[2],"active":r[3],"done":r[4]} for r in cursor.fetchall()]
+        
+        if report_type in ("all", "technicians"):
+            cursor.execute("""
+                SELECT u.id, u.name,
+                       COUNT(o.id) as total,
+                       SUM(CASE WHEN o.status='in_progress' THEN 1 ELSE 0 END) as active,
+                       SUM(CASE WHEN o.status='completed' THEN 1 ELSE 0 END) as done
+                FROM users u LEFT JOIN orders o ON o.technician_id = u.id
+                    AND o.created_at BETWEEN ? AND ?
+                WHERE u.role = 'technician' AND u.is_active = 1
+                GROUP BY u.id ORDER BY total DESC
+            """, (start, end))
+            result["technicians"] = [{"id":r[0],"name":r[1],"total":r[2],"active":r[3],"done":r[4]} for r in cursor.fetchall()]
+        
+        if report_type in ("all", "work_types"):
+            cursor.execute("""
+                SELECT work_type, COUNT(*) as total,
+                       SUM(CASE WHEN status='in_progress' THEN 1 ELSE 0 END) as active,
+                       SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as done
+                FROM orders
+                WHERE created_at BETWEEN ? AND ?
+                GROUP BY work_type ORDER BY total DESC
+            """, (start, end))
+            result["work_types"] = [{"name":r[0],"total":r[1],"active":r[2],"done":r[3]} for r in cursor.fetchall()]
+        
+        conn.close()
+        return result
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
 @app.get("/api/reports/summary")
 async def get_summary(current_user: dict = Depends(get_current_user)):
     """Сводка по заказам"""

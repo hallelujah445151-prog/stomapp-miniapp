@@ -146,6 +146,11 @@ export const apiService = {
   async getByWorkType(): Promise<{name:string,total:number,active:number,done:number}[]> {
     const response = await api.get('/reports/by-work-type');
     return response.data.work_types;
+  },
+
+  async getPeriodReport(type: string, start: string, end: string): Promise<any> {
+    const response = await api.get('/reports/period', { params: { report_type: type, start, end } });
+    return response.data;
   }
 };
 

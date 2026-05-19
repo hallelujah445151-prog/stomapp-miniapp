@@ -165,6 +165,9 @@ const DashboardPage: React.FC = () => {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [reportType, setReportType] = useState('');
   const [reportData, setReportData] = useState<any>(null);
+  const [periodType, setPeriodType] = useState('all');
+  const [periodStart, setPeriodStart] = useState('');
+  const [periodEnd, setPeriodEnd] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [doctorFilter, setDoctorFilter] = useState(0);
   const [technicianFilter, setTechnicianFilter] = useState(0);
@@ -202,6 +205,14 @@ const DashboardPage: React.FC = () => {
         apiService.getByWorkType().then(data => setReportData(data)).catch(()=>{});
       }
     } catch(e: any) { alert('Ошибка загрузки: ' + (e?.response?.data?.detail || e.message)); }
+  };
+
+  const loadPeriodReport = async () => {
+    try {
+      const data = await apiService.getPeriodReport(periodType, periodStart, periodEnd);
+      setReportType('period_result');
+      setReportData(data);
+    } catch(e: any) { alert('Ошибка: ' + (e?.response?.data?.detail || e.message)); }
   };
 
   const handleOrderClick = (orderId: number) => {
@@ -295,7 +306,31 @@ const DashboardPage: React.FC = () => {
               <button onClick={() => loadReport('doctors')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='doctors'?'#1565c0':'#e3f2fd', color: reportType==='doctors'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='doctors'?600:400 }}>👨‍⚕️ По врачам</button>
               <button onClick={() => loadReport('technicians')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='technicians'?'#1565c0':'#e3f2fd', color: reportType==='technicians'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='technicians'?600:400 }}>🔧 По техникам</button>
               <button onClick={() => loadReport('work_types')} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: reportType==='work_types'?'#1565c0':'#e3f2fd', color: reportType==='work_types'?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: reportType==='work_types'?600:400 }}>📊 По видам работ</button>
-              <button onClick={() => { alert('Отчет за период — в разработке'); }} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#e3f2fd', color: '#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>📅 За период</button>
+              <button onClick={() => { setReportType('period_type'); setReportData(null); }} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: (reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#1565c0':'#e3f2fd', color: (reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#fff':'#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>📅 За период</button>
+            </div>
+          )}
+          {reportType === 'period_type' && (
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+              {[['all','📊 Общий'],['doctors','👨‍⚕️ По врачам'],['technicians','🔧 По техникам'],['work_types','📋 По видам работ']].map(([k,v]) => (
+                <button key={k} onClick={() => { setReportType('period_dates'); setPeriodType(k); }} style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#e3f2fd', color: '#1565c0', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>{v}</button>
+              ))}
+            </div>
+          )}
+          {reportType === 'period_dates' && (
+            <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
+                {periodType==='all'?'📊 Общий отчёт':periodType==='doctors'?'👨‍⚕️ По врачам':periodType==='technicians'?'🔧 По техникам':'📋 По видам работ'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px' }}>с</span>
+                <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} style={{ padding: '6px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px' }} />
+                <span style={{ fontSize: '12px' }}>по</span>
+                <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} style={{ padding: '6px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px' }} />
+                <button onClick={() => { if(periodStart&&periodEnd) loadPeriodReport(); else alert('Выберите даты'); }}
+                  style={{ padding: '6px 14px', backgroundColor: '#1565c0', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Показать</button>
+                <button onClick={() => setReportType('period_type')}
+                  style={{ padding: '6px 10px', backgroundColor: '#fff', color: '#888', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>← Назад</button>
+              </div>
             </div>
           )}
           {reportData && (
@@ -339,6 +374,35 @@ const DashboardPage: React.FC = () => {
                   <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Вид работы</th><th style={{ padding: '6px' }}>Всего</th><th style={{ padding: '6px' }}>В работе</th><th style={{ padding: '6px' }}>Готово</th></tr></thead>
                   <tbody>{reportData.map((r: any) => <tr key={r.name} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px' }}>{r.total}</td><td style={{ padding: '6px', color: '#1976d2' }}>{r.active}</td><td style={{ padding: '6px', color: '#388e3c' }}>{r.done}</td></tr>)}</tbody>
                 </table>
+              )}
+              {reportType === 'period_result' && reportData && (
+                <div>
+                  <div style={{fontSize:'12px',color:'#888',marginBottom:'10px'}}>📅 {reportData.period.start} — {reportData.period.end}</div>
+                  {reportData.doctors && (
+                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>👨‍⚕️ По врачам</summary>
+                      <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                        <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '4px' }}>Врач</th><th style={{ padding: '4px' }}>Всего</th><th style={{ padding: '4px' }}>В работе</th><th style={{ padding: '4px' }}>Готово</th></tr></thead>
+                        <tbody>{reportData.doctors.map((r:any)=><tr key={r.id} style={{borderBottom:'1px solid #f0f0f0'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px'}}>{r.total}</td><td style={{padding:'4px',color:'#1976d2'}}>{r.active}</td><td style={{padding:'4px',color:'#388e3c'}}>{r.done}</td></tr>)}</tbody>
+                      </table>
+                    </details>
+                  )}
+                  {reportData.technicians && (
+                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>🔧 По техникам</summary>
+                      <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                        <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '4px' }}>Техник</th><th style={{ padding: '4px' }}>Всего</th><th style={{ padding: '4px' }}>В работе</th><th style={{ padding: '4px' }}>Готово</th></tr></thead>
+                        <tbody>{reportData.technicians.map((r:any)=><tr key={r.id} style={{borderBottom:'1px solid #f0f0f0'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px'}}>{r.total}</td><td style={{padding:'4px',color:'#1976d2'}}>{r.active}</td><td style={{padding:'4px',color:'#388e3c'}}>{r.done}</td></tr>)}</tbody>
+                      </table>
+                    </details>
+                  )}
+                  {reportData.work_types && (
+                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>📋 По видам работ</summary>
+                      <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                        <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '4px' }}>Вид</th><th style={{ padding: '4px' }}>Всего</th><th style={{ padding: '4px' }}>В работе</th><th style={{ padding: '4px' }}>Готово</th></tr></thead>
+                        <tbody>{reportData.work_types.map((r:any)=><tr key={r.name} style={{borderBottom:'1px solid #f0f0f0'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px'}}>{r.total}</td><td style={{padding:'4px',color:'#1976d2'}}>{r.active}</td><td style={{padding:'4px',color:'#388e3c'}}>{r.done}</td></tr>)}</tbody>
+                      </table>
+                    </details>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -551,10 +615,12 @@ const CreateOrderPage: React.FC = () => {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
+  const [workTypesCr, setWorkTypesCr] = useState<any[]>([]);
 
   useEffect(() => {
     apiService.getDoctors().then(setDoctors).catch(()=>{});
     apiService.getTechnicians().then(setTechnicians).catch(()=>{});
+    apiService.getWorkTypes().then(setWorkTypesCr).catch(()=>{});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -692,13 +758,9 @@ const CreateOrderPage: React.FC = () => {
                   }}
                 >
                   <option value="">Выберите вид работы</option>
-                  <option value="Цирконевая коронка">Цирконевая коронка</option>
-                  <option value="Керамическая коронка">Керамическая коронка</option>
-                  <option value="Временная коронка">Временная коронка</option>
-                  <option value="Вкладной протез">Вкладной протез</option>
-                  <option value="Бюгельное протезирование">Бюгельное протезирование</option>
-                  <option value="Ортодонтическая шина">Ортодонтическая шина</option>
-                  <option value="Коронка из циркония">Коронка из циркония</option>
+                  {workTypesCr.map((wt: any) => (
+                    <option key={wt.id} value={wt.name}>{wt.name}</option>
+                  ))}
                 </select>
               </div>
 
