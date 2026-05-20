@@ -26,8 +26,11 @@ const api = axios.create({
 
 export const apiService = {
   // Auth
-  async loginByTelegramId(telegramId: number): Promise<{ access_token: string; user: User }> {
-    const response = await api.post('/auth/login', { telegram_id: telegramId });
+  async loginByTelegramId(telegramId?: number, name?: string): Promise<{ access_token: string; user: User }> {
+    const body: any = {};
+    if (telegramId) body.telegram_id = telegramId;
+    if (name) body.name = name;
+    const response = await api.post('/auth/login', body);
     return response.data;
   },
 

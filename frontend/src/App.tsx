@@ -17,129 +17,56 @@ interface Order {
   description?: string;
 }
 
-// Login Page
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuthStore();
-  const [formData, setFormData] = useState({
-    telegram_id: ''
-  });
+  const [formData, setFormData] = useState({ telegram_id: '', name: '' });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/');
-    }
-  }, [isAuthenticated, navigate]);
+  useEffect(() => { if (isAuthenticated) navigate('/'); }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.telegram_id || isNaN(Number(formData.telegram_id)) || Number(formData.telegram_id) < 1) {
-      setErrorMsg('Введите корректный Telegram ID (число)');
+    if (!formData.telegram_id && !formData.name) {
+      setErrorMsg('Введите Telegram ID или ФИО');
       return;
     }
-    
+    if (formData.telegram_id && (isNaN(Number(formData.telegram_id)) || Number(formData.telegram_id) < 1)) {
+      setErrorMsg('Telegram ID должен быть числом');
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
-
     try {
-      const result = await apiService.loginByTelegramId(Number(formData.telegram_id));
-      login({
-        id: result.user.id,
-        name: result.user.name,
-        telegram_id: String(result.user.telegram_id),
-        role: result.user.role,
-        is_admin: result.user.is_admin
-      });
+      const result = await apiService.loginByTelegramId(Number(formData.telegram_id) || undefined as any, formData.name || undefined);
+      login({ id: result.user.id, name: result.user.name, telegram_id: String(result.user.telegram_id), role: result.user.role, is_admin: result.user.is_admin });
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || 'Ошибка входа. Проверьте Telegram ID.';
-      setErrorMsg(msg);
+      setErrorMsg(err?.response?.data?.detail || 'Ошибка входа');
     }
-
     setLoading(false);
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: '100vh',
-      backgroundColor: '#f5f5f5',
-      padding: '20px'
-    }}>
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '30px', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        maxWidth: '400px',
-        width: '100%'
-      }}>
-        <h1 style={{ textAlign: 'center', marginBottom: '8px', color: '#333' }}>
-          StomApp - Вход
-        </h1>
-        <p style={{ textAlign: 'center', marginBottom: '20px', fontSize: '13px', color: '#666' }}>
-          Введите ваш Telegram ID для входа
-        </p>
-
-        {errorMsg && (
-          <div style={{ 
-            backgroundColor: '#ffebee', 
-            color: '#c62828', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            marginBottom: '16px',
-            fontSize: '14px'
-          }}>
-            ❌ {errorMsg}
-          </div>
-        )}
-        
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#F8F9FA', padding: '20px' }}>
+      <div style={{ background: '#fff', padding: '32px', borderRadius: '16px', boxShadow: 'var(--shadow-2)', maxWidth: '400px', width: '100%' }}>
+        <h1 style={{ textAlign: 'center', marginBottom: '8px', fontSize: '20px', fontWeight: 500, color: '#202124' }}>StomApp</h1>
+        <p style={{ textAlign: 'center', marginBottom: '24px', fontSize: '13px', color: '#5F6368' }}>Войдите по Telegram ID или ФИО</p>
+        {errorMsg && <div style={{ background: '#FCE8E6', color: '#C5221F', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px' }}>{errorMsg}</div>}
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
-              Telegram ID:
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.telegram_id}
-              onChange={(e) => setFormData({ telegram_id: e.target.value })}
-              style={{ 
-                width: '100%', 
-                padding: '12px', 
-                border: '2px solid #ddd', 
-                borderRadius: '8px',
-                fontSize: '16px'
-              }}
-              placeholder="Например: 176897162"
-            />
+          <div style={{ marginBottom: '16px' }}>
+            <label className="label">Telegram ID</label>
+            <input type="text" className="input" value={formData.telegram_id} onChange={e => setFormData({ ...formData, telegram_id: e.target.value })} placeholder="5563461010" />
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              backgroundColor: loading ? '#ccc' : '#229ED9',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? '🔄 Вход...' : '🚀 Войти'}
+          <div style={{ marginBottom: '20px' }}>
+            <label className="label">ФИО</label>
+            <input type="text" className="input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Плюхин Матвей Александрович" />
+          </div>
+          <button type="submit" disabled={loading} className="button button-primary" style={{ width: '100%', padding: '12px' }}>
+            {loading ? 'Вход...' : 'Войти'}
           </button>
         </form>
-
-        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: '#999' }}>
-          Ваш Telegram ID должен быть в базе сотрудников
-        </p>
+        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '11px', color: '#80868B' }}>Достаточно заполнить одно из полей</p>
       </div>
     </div>
   );
