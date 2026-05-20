@@ -8,7 +8,7 @@ services:
     autoDeploy: true
     envVars:
       - key: BOT_TOKEN
-        value: 8592737363:AAGK2R2KxJuGY9-RPZlBq2YBupKz0NAr0H8
+        sync: false
       - key: ADMIN_SECRET_CODE
         value: endurance
     healthCheckPath: /
