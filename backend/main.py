@@ -746,6 +746,17 @@ async def approve_personnel(personnel_id: int, current_user: dict = Depends(get_
     return {"message": "Пользователь подтверждён"}
 
 
+@app.get("/api/admin/export-db")
+async def export_db(current_user: dict = Depends(get_current_user)):
+    """Скачать БД (только админ)"""
+    if current_user["role"] != "admin" and not current_user["is_admin"]:
+        raise HTTPException(status_code=403, detail="Только администраторы")
+    db_path = get_db_path()
+    if not os.path.exists(db_path):
+        raise HTTPException(status_code=404, detail="БД не найдена")
+    return FileResponse(db_path, filename="orders.db", media_type="application/octet-stream")
+
+
 # Раздача фото (до catch-all, иначе перехватывается)
 @app.get("/api/orders/{order_id}/photo")
 async def get_photo(order_id: int):

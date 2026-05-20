@@ -162,7 +162,9 @@ const DashboardPage: React.FC = () => {
   const filteredOrders = (filter === 'all' ? orders : orders.filter(o => o.status === filter))
     .filter(o => !searchQuery || o.patient_name?.toLowerCase().includes(searchQuery.toLowerCase()) || o.work_type.toLowerCase().includes(searchQuery.toLowerCase()) || String(o.id).includes(searchQuery))
     .filter(o => !doctorFilter || o.doctor_id === doctorFilter)
-    .filter(o => !technicianFilter || o.technician_id === technicianFilter);
+    .filter(o => !technicianFilter || o.technician_id === technicianFilter)
+    .filter(o => user?.role === 'technician' && !user.is_admin ? o.technician_id === user.id : true)
+    .filter(o => user?.role === 'doctor' && !user.is_admin ? o.doctor_id === user.id : true);
 
   return (
     <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
@@ -205,6 +207,7 @@ const DashboardPage: React.FC = () => {
             <button onClick={() => loadReport('urgent')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='urgent'?'#FCE8E6':'#fff', color: reportType==='urgent'?'#C5221F':'#5F6368' }}>🔥 Срочные</button>
             <button onClick={() => loadReport('overdue')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='overdue'?'#FCE8E6':'#fff', color: reportType==='overdue'?'#C5221F':'#5F6368' }}>⚠️ Просрочено</button>
             <button onClick={() => { setReportType(reportType==='reports'?'':'reports'); setReportData(null); }} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types'||reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#1A73E8':'#fff', color: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types'||reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#fff':'#5F6368' }}>📊 Отчеты</button>
+            <a href="/api/admin/export-db" onClick={(e: any) => { e.preventDefault(); window.open('/api/admin/export-db', '_blank'); }} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: '#fff', color: '#5F6368', textDecoration: 'none' }}>💾 Скачать БД</a>
           </div>
           {reportType === 'reports' && (
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
@@ -477,7 +480,7 @@ const DashboardPage: React.FC = () => {
                 <div style={{fontSize:'11px',color:'#E37400',background:'#FEF7E0',padding:'4px 8px',borderRadius:'8px',display:'inline-block',marginBottom:'8px'}}>🔥 Срочно: {order.deadline}</div>
               ) : null}
               <div style={{display:'flex',gap:'6px',marginTop:'4px'}}>
-                {order.status==='in_progress'&&(
+                {order.status==='in_progress'&&(user?.is_admin||user?.role==='technician')&&(
                   <button onClick={e=>{e.stopPropagation();apiService.updateOrder(order.id,{status:'completed'}).then(()=>loadOrdersFromApi()).catch(()=>{})}}
                     style={{padding:'5px 14px',fontSize:'12px',fontWeight:500,border:'none',borderRadius:'24px',background:'#34A853',color:'#fff',cursor:'pointer'}}>✅ Готово</button>
                 )}
@@ -523,7 +526,13 @@ const OrderDetailsPage: React.FC = () => {
   return (
     <div style={{ maxWidth: '600px', margin: '20px auto', padding: '20px' }}>
       <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <button onClick={() => navigate('/')} style={{ marginBottom: '20px', padding: '10px 15px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>← Назад</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <button onClick={() => navigate('/')} className="button button-secondary" style={{ fontSize: '13px' }}>← Назад</button>
+          {order.status === 'in_progress' && user?.is_admin && (
+            <button onClick={() => { if(!confirm('Отменить заказ #'+order.id+'?'))return; apiService.updateOrder(order.id,{status:'cancelled'}).then(()=>setOrder({...order,status:'cancelled'})).catch(()=>alert('Ошибка')); }}
+              style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 500, border: 'none', borderRadius: '24px', background: '#F9AB00', color: '#fff', cursor: 'pointer' }}>Отменить заказ</button>
+          )}
+        </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h1 style={{ fontSize: '22px', color: '#333', margin: 0 }}>📋 Заказ #{order.id}</h1>
@@ -546,7 +555,7 @@ const OrderDetailsPage: React.FC = () => {
           </div>
         </div>
 
-        {order.status === 'in_progress' && (
+        {(order.status === 'in_progress' && (user?.is_admin || user?.role === 'technician')) && (
           <div style={{ padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '8px', textAlign: 'center' }}>
             <button onClick={markDone} style={{ padding: '14px 28px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' }}>
               ✅ Отметить как выполненный
