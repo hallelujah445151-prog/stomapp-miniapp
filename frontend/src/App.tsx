@@ -97,6 +97,7 @@ const DashboardPage: React.FC = () => {
   const [periodEnd, setPeriodEnd] = useState('');
   const [expandedDoc, setExpandedDoc] = useState<number|null>(null);
   const [expandedTech, setExpandedTech] = useState<number|null>(null);
+  const [expandedWT, setExpandedWT] = useState<string|null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [doctorFilter, setDoctorFilter] = useState(0);
   const [technicianFilter, setTechnicianFilter] = useState(0);
@@ -310,9 +311,27 @@ const DashboardPage: React.FC = () => {
                 </table>
               )}
               {reportType === 'work_types' && (
-                <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
-                  <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Вид работы</th><th style={{ padding: '6px' }}>Всего</th><th style={{ padding: '6px' }}>В работе</th><th style={{ padding: '6px' }}>Готово</th></tr></thead>
-                  <tbody>{reportData.map((r: any) => <tr key={r.name} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px' }}>{r.total}</td><td style={{ padding: '6px', color: '#1976d2' }}>{r.active}</td><td style={{ padding: '6px', color: '#388e3c' }}>{r.done}</td></tr>)}</tbody>
+                <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                  <thead><tr style={{ borderBottom: '2px solid #DADCE0', textAlign: 'left', color: '#5F6368' }}><th style={{ padding: '6px', fontWeight: 500 }}>Вид работы</th><th style={{ padding: '6px', fontWeight: 500 }}>Всего</th><th style={{ padding: '6px', fontWeight: 500 }}>В работе</th><th style={{ padding: '6px', fontWeight: 500 }}>Готово</th></tr></thead>
+                  <tbody>{reportData.map((r: any) => (
+                    <React.Fragment key={r.name}>
+                      <tr onClick={() => setExpandedWT(expandedWT===r.name?null:r.name)} style={{ borderBottom: '1px solid #E8EAED', cursor: 'pointer', background: expandedWT===r.name?'#F8F9FA':'#fff' }}>
+                        <td style={{ padding: '6px' }}>{r.name}</td>
+                        <td style={{ padding: '6px', fontWeight: 500 }}>{r.total}</td>
+                        <td style={{ padding: '6px', color: '#1A73E8' }}>{r.active}</td>
+                        <td style={{ padding: '6px', color: '#34A853' }}>{r.done}</td>
+                      </tr>
+                      {expandedWT===r.name && r.orders && (
+                        <tr><td colSpan={4} style={{ padding: '6px 16px', background: '#F8F9FA', fontSize: '11px' }}>
+                          {r.orders.map((o:any) => (
+                            <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '4px 0', borderBottom: '1px solid #E8EAED', cursor: 'pointer', color: o.status==='completed'?'#34A853':'#5F6368' }}>
+                              #{o.id} {o.technician_name ? '🔧 '+o.technician_name+' · ' : ''}📦{o.quantity}шт — {o.patient_name||'—'} | {o.deadline} | {o.status==='completed'?'✅':'🔵'}
+                            </div>
+                          ))}
+                        </td></tr>
+                      )}
+                    </React.Fragment>
+                  ))}</tbody>
                 </table>
               )}
               {reportType === 'period_result' && reportData && (

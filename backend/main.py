@@ -972,7 +972,7 @@ async def get_workload(current_user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/reports/by-work-type")
-async def get_by_work_type(current_user: dict = Depends(get_current_user)):
+async def get_by_work_type(details: bool = False, current_user: dict = Depends(get_current_user)):
     """Статистика по видам работ"""
     conn = get_connection()
     cursor = conn.cursor()
@@ -985,8 +985,19 @@ async def get_by_work_type(current_user: dict = Depends(get_current_user)):
         ORDER BY total DESC
     """)
     rows = cursor.fetchall()
+    result = []
+    for r in rows:
+        wt = {"name": r[0], "total": r[1], "active": r[2], "done": r[3]}
+        if details:
+            cursor.execute("""
+                SELECT o.id, o.quantity, o.patient_name, o.deadline, o.status, t.name
+                FROM orders o LEFT JOIN users t ON o.technician_id = t.id
+                WHERE o.work_type = ? ORDER BY o.created_at DESC
+            """, (r[0],))
+            wt["orders"] = [{"id":o[0],"quantity":o[1],"patient_name":o[2],"deadline":o[3],"status":o[4],"technician_name":o[5]} for o in cursor.fetchall()]
+        result.append(wt)
     conn.close()
-    return {"work_types": [{"name":r[0],"total":r[1],"active":r[2],"done":r[3]} for r in rows]}
+    return result
 
 
 # Отчёты за период
