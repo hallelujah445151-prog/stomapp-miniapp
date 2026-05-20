@@ -194,6 +194,17 @@ export const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ role }
                   style={{ padding: '8px 12px', fontSize: '13px' }}
                   onClick={(e) => { e.stopPropagation(); loadPersonnelDetail(person.id); }}
                 >✏️</button>
+                {!person.is_active && (
+                  <button
+                    className="button button-success"
+                    style={{ padding: '8px 12px', fontSize: '13px' }}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try { await apiService.approvePersonnel(person.id); loadPersonnel(); showToast('Пользователь одобрен', 'success'); }
+                      catch { showToast('Ошибка', 'error'); }
+                    }}
+                  >✅</button>
+                )}
                 <button
                   className="button button-danger"
                   style={{ padding: '8px 12px', fontSize: '13px' }}

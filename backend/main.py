@@ -711,29 +711,39 @@ async def create_personnel(
     personnel: PersonnelCreate,
     current_user: dict = Depends(get_current_user)
 ):
-    """Создание нового сотрудника"""
-    if current_user["role"] != "admin" and not current_user["is_admin"]:
-        raise HTTPException(status_code=403, detail="Только администраторы могут создавать сотрудников")
-    
+    """Создание нового сотрудника — сразу активен (админ создаёт)"""
     conn = get_connection()
     cursor = conn.cursor()
-    
     try:
         cursor.execute("""
             INSERT INTO users (telegram_id, name, role, is_admin, is_active, created_at)
             VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
         """, (personnel.telegram_id, personnel.name, personnel.role, 
               1 if personnel.is_admin else 0))
-        
         personnel_id = cursor.lastrowid
         conn.commit()
-        
         conn.close()
         return {"message": "Сотрудник создан", "personnel_id": personnel_id}
     except Exception as e:
         conn.rollback()
         conn.close()
         raise HTTPException(status_code=500, detail=f"Ошибка при создании сотрудника: {str(e)}")
+
+
+@app.put("/api/personnel/{personnel_id}/approve")
+async def approve_personnel(personnel_id: int, current_user: dict = Depends(get_current_user)):
+    """Подтверждение нового пользователя (админ активирует)"""
+    if current_user["role"] != "admin" and not current_user["is_admin"]:
+        raise HTTPException(status_code=403, detail="Только администраторы")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET is_active = 1 WHERE id = ? AND is_active = 0", (personnel_id,))
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Пользователь не найден или уже активен")
+    conn.commit()
+    conn.close()
+    return {"message": "Пользователь подтверждён"}
 
 
 # Раздача фото (до catch-all, иначе перехватывается)

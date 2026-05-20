@@ -106,6 +106,10 @@ export const apiService = {
     await api.delete(`/personnel/${personnelId}`);
   },
 
+  async approvePersonnel(personnelId: number): Promise<void> {
+    await api.put(`/personnel/${personnelId}/approve`);
+  },
+
   // Reports
   async getReportsSummary(): Promise<{total:number,in_progress:number,completed:number,urgent:number}> {
     const response = await api.get('/reports/summary');
