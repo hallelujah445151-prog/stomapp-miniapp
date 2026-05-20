@@ -1063,7 +1063,7 @@ async def get_summary(current_user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/reports/by-doctor")
-async def get_by_doctor(current_user: dict = Depends(get_current_user)):
+async def get_by_doctor(details: bool = False, current_user: dict = Depends(get_current_user)):
     """Статистика по врачам"""
     conn = get_connection()
     cursor = conn.cursor()
@@ -1078,15 +1078,22 @@ async def get_by_doctor(current_user: dict = Depends(get_current_user)):
             GROUP BY u.id ORDER BY total DESC
         """)
         rows = cursor.fetchall()
+        result = []
+        for r in rows:
+            doc = {"id": r[0], "name": r[1], "total": r[2], "active": r[3], "done": r[4]}
+            if details:
+                cursor.execute("SELECT id, work_type, patient_name, deadline, status FROM orders WHERE doctor_id = ? ORDER BY created_at DESC", (r[0],))
+                doc["orders"] = [{"id": o[0], "work_type": o[1], "patient_name": o[2], "deadline": o[3], "status": o[4]} for o in cursor.fetchall()]
+            result.append(doc)
         conn.close()
-        return [{"id": r[0], "name": r[1], "total": r[2], "active": r[3], "done": r[4]} for r in rows]
+        return result
     except Exception as e:
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/reports/by-technician")
-async def get_by_technician(current_user: dict = Depends(get_current_user)):
+async def get_by_technician(details: bool = False, current_user: dict = Depends(get_current_user)):
     """Статистика по техникам"""
     conn = get_connection()
     cursor = conn.cursor()
@@ -1101,8 +1108,15 @@ async def get_by_technician(current_user: dict = Depends(get_current_user)):
             GROUP BY u.id ORDER BY total DESC
         """)
         rows = cursor.fetchall()
+        result = []
+        for r in rows:
+            tech = {"id": r[0], "name": r[1], "total": r[2], "active": r[3], "done": r[4]}
+            if details:
+                cursor.execute("SELECT id, work_type, patient_name, deadline, status FROM orders WHERE technician_id = ? ORDER BY created_at DESC", (r[0],))
+                tech["orders"] = [{"id": o[0], "work_type": o[1], "patient_name": o[2], "deadline": o[3], "status": o[4]} for o in cursor.fetchall()]
+            result.append(tech)
         conn.close()
-        return [{"id": r[0], "name": r[1], "total": r[2], "active": r[3], "done": r[4]} for r in rows]
+        return result
     except Exception as e:
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))

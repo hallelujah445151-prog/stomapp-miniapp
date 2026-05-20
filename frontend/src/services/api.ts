@@ -108,12 +108,12 @@ export const apiService = {
     const response = await api.get('/reports/summary');
     return response.data;
   },
-  async getReportsByDoctor(): Promise<{id:number,name:string,total:number,active:number,done:number}[]> {
-    const response = await api.get('/reports/by-doctor');
+  async getReportsByDoctor(): Promise<any[]> {
+    const response = await api.get('/reports/by-doctor', { params: { details: true } });
     return response.data;
   },
-  async getReportsByTechnician(): Promise<{id:number,name:string,total:number,active:number,done:number}[]> {
-    const response = await api.get('/reports/by-technician');
+  async getReportsByTechnician(): Promise<any[]> {
+    const response = await api.get('/reports/by-technician', { params: { details: true } });
     return response.data;
   },
 

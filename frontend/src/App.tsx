@@ -168,6 +168,8 @@ const DashboardPage: React.FC = () => {
   const [periodType, setPeriodType] = useState('all');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
+  const [expandedDoc, setExpandedDoc] = useState<number|null>(null);
+  const [expandedTech, setExpandedTech] = useState<number|null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [doctorFilter, setDoctorFilter] = useState(0);
   const [technicianFilter, setTechnicianFilter] = useState(0);
@@ -317,15 +319,51 @@ const DashboardPage: React.FC = () => {
                 <button onClick={() => { setReportData(null); setReportType(''); }} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#5F6368' }}>✕</button>
               </div>
               {reportType === 'doctors' && (
-                <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
-                  <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Врач</th><th style={{ padding: '6px' }}>Всего</th><th style={{ padding: '6px' }}>В работе</th><th style={{ padding: '6px' }}>Готово</th></tr></thead>
-                  <tbody>{reportData.map((r: any) => <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px' }}>{r.total}</td><td style={{ padding: '6px', color: '#1976d2' }}>{r.active}</td><td style={{ padding: '6px', color: '#388e3c' }}>{r.done}</td></tr>)}</tbody>
+                <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                  <thead><tr style={{ borderBottom: '2px solid #DADCE0', textAlign: 'left', color: '#5F6368' }}><th style={{ padding: '6px', fontWeight: 500 }}>Врач</th><th style={{ padding: '6px', fontWeight: 500 }}>Всего</th><th style={{ padding: '6px', fontWeight: 500 }}>В работе</th><th style={{ padding: '6px', fontWeight: 500 }}>Готово</th></tr></thead>
+                  <tbody>{reportData.map((r: any) => (
+                    <React.Fragment key={r.id}>
+                      <tr onClick={() => setExpandedDoc(expandedDoc===r.id?null:r.id)} style={{ borderBottom: '1px solid #E8EAED', cursor: 'pointer', background: expandedDoc===r.id?'#F8F9FA':'#fff' }}>
+                        <td style={{ padding: '6px' }}>{r.name}</td>
+                        <td style={{ padding: '6px', fontWeight: 500 }}>{r.total}</td>
+                        <td style={{ padding: '6px', color: '#1A73E8' }}>{r.active}</td>
+                        <td style={{ padding: '6px', color: '#34A853' }}>{r.done}</td>
+                      </tr>
+                      {expandedDoc===r.id && r.orders && (
+                        <tr><td colSpan={4} style={{ padding: '6px 16px', background: '#F8F9FA', fontSize: '11px' }}>
+                          {r.orders.map((o:any) => (
+                            <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '4px 0', borderBottom: '1px solid #E8EAED', cursor: 'pointer', color: o.status==='completed'?'#34A853':'#5F6368' }}>
+                              #{o.id} {o.work_type} — {o.patient_name||'—'} | {o.deadline} | {o.status==='completed'?'✅':'🔵'}
+                            </div>
+                          ))}
+                        </td></tr>
+                      )}
+                    </React.Fragment>
+                  ))}</tbody>
                 </table>
               )}
               {reportType === 'technicians' && (
-                <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
-                  <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '6px' }}>Техник</th><th style={{ padding: '6px' }}>Всего</th><th style={{ padding: '6px' }}>В работе</th><th style={{ padding: '6px' }}>Готово</th></tr></thead>
-                  <tbody>{reportData.map((r: any) => <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}><td style={{ padding: '6px' }}>{r.name}</td><td style={{ padding: '6px' }}>{r.total}</td><td style={{ padding: '6px', color: '#1976d2' }}>{r.active}</td><td style={{ padding: '6px', color: '#388e3c' }}>{r.done}</td></tr>)}</tbody>
+                <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                  <thead><tr style={{ borderBottom: '2px solid #DADCE0', textAlign: 'left', color: '#5F6368' }}><th style={{ padding: '6px', fontWeight: 500 }}>Техник</th><th style={{ padding: '6px', fontWeight: 500 }}>Всего</th><th style={{ padding: '6px', fontWeight: 500 }}>В работе</th><th style={{ padding: '6px', fontWeight: 500 }}>Готово</th></tr></thead>
+                  <tbody>{reportData.map((r: any) => (
+                    <React.Fragment key={r.id}>
+                      <tr onClick={() => setExpandedTech(expandedTech===r.id?null:r.id)} style={{ borderBottom: '1px solid #E8EAED', cursor: 'pointer', background: expandedTech===r.id?'#F8F9FA':'#fff' }}>
+                        <td style={{ padding: '6px' }}>{r.name}</td>
+                        <td style={{ padding: '6px', fontWeight: 500 }}>{r.total}</td>
+                        <td style={{ padding: '6px', color: '#1A73E8' }}>{r.active}</td>
+                        <td style={{ padding: '6px', color: '#34A853' }}>{r.done}</td>
+                      </tr>
+                      {expandedTech===r.id && r.orders && (
+                        <tr><td colSpan={4} style={{ padding: '6px 16px', background: '#F8F9FA', fontSize: '11px' }}>
+                          {r.orders.map((o:any) => (
+                            <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '4px 0', borderBottom: '1px solid #E8EAED', cursor: 'pointer', color: o.status==='completed'?'#34A853':'#5F6368' }}>
+                              #{o.id} {o.work_type} — {o.patient_name||'—'} | {o.deadline} | {o.status==='completed'?'✅':'🔵'}
+                            </div>
+                          ))}
+                        </td></tr>
+                      )}
+                    </React.Fragment>
+                  ))}</tbody>
                 </table>
               )}
               {reportType === 'urgent' && reportData.map((o: any) => (
