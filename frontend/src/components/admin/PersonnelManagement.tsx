@@ -358,8 +358,6 @@ const CreatePersonnelForm: React.FC<{ onSuccess: () => void; onCancel: () => voi
       >
         <option value="technician">🔧 Техник</option>
         <option value="doctor">👨‍⚕️ Врач</option>
-        <option value="dispatcher">📋 Диспетчер</option>
-        <option value="admin">👑 Администратор</option>
       </select>
 
       <label className="label">Права администратора</label>
@@ -444,8 +442,6 @@ const EditPersonnelForm: React.FC<{ personnel: PersonnelDetail; onSuccess: () =>
       >
         <option value="technician">🔧 Техник</option>
         <option value="doctor">👨‍⚕️ Врач</option>
-        <option value="dispatcher">📋 Диспетчер</option>
-        <option value="admin">👑 Администратор</option>
       </select>
 
       <label className="label">Статус</label>

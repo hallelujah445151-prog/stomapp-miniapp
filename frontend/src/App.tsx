@@ -56,11 +56,11 @@ const LoginPage: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
             <label className="label">Telegram ID</label>
-            <input type="text" className="input" value={formData.telegram_id} onChange={e => setFormData({ ...formData, telegram_id: e.target.value })} placeholder="5563461010" />
+            <input type="text" className="input" value={formData.telegram_id} onChange={e => setFormData({ ...formData, telegram_id: e.target.value })} placeholder="Введите Telegram ID" autoComplete="off" />
           </div>
           <div style={{ marginBottom: '20px' }}>
             <label className="label">ФИО</label>
-            <input type="text" className="input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Плюхин Матвей Александрович" />
+            <input type="text" className="input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Введите ФИО" autoComplete="off" />
           </div>
           <button type="submit" disabled={loading} className="button button-primary" style={{ width: '100%', padding: '12px' }}>
             {loading ? 'Вход...' : 'Войти'}
@@ -207,7 +207,7 @@ const DashboardPage: React.FC = () => {
             <button onClick={() => loadReport('urgent')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='urgent'?'#FCE8E6':'#fff', color: reportType==='urgent'?'#C5221F':'#5F6368' }}>🔥 Срочные</button>
             <button onClick={() => loadReport('overdue')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='overdue'?'#FCE8E6':'#fff', color: reportType==='overdue'?'#C5221F':'#5F6368' }}>⚠️ Просрочено</button>
             <button onClick={() => { setReportType(reportType==='reports'?'':'reports'); setReportData(null); }} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types'||reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#1A73E8':'#fff', color: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types'||reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#fff':'#5F6368' }}>📊 Отчеты</button>
-            <a href="/api/admin/export-db" onClick={(e: any) => { e.preventDefault(); window.open('/api/admin/export-db', '_blank'); }} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: '#fff', color: '#5F6368', textDecoration: 'none' }}>💾 Скачать БД</a>
+            <button onClick={() => window.open('/api/admin/export-db', '_blank')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: '#fff', color: '#5F6368' }}>💾 Скачать БД</button>
           </div>
           {reportType === 'reports' && (
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>

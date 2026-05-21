@@ -833,7 +833,7 @@ async def notify_order_created(order_data: dict, current_user: dict = Depends(ge
                 try:
                     await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
                         "chat_id": tech[0],
-                        "text": f"🔔 Новый заказ #{order_id}!\n\n🔨 {work_type}\nНазначен вам.\n📅 Проверьте: https://stomapp-miniapp-1.onrender.com/order/{order_id}"
+                        "text": f"🔔 Новый заказ #{order_id}!\n\n🔨 {work_type}\nНазначен вам."
                     })
                     sent.append(f"технику {tech[1]}")
                 except Exception: pass
@@ -846,7 +846,7 @@ async def notify_order_created(order_data: dict, current_user: dict = Depends(ge
                 try:
                     await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
                         "chat_id": doc[0],
-                        "text": f"🔔 Ваш заказ #{order_id} принят в работу!\n\n🔨 {work_type}\n📅 Следите за статусом: https://stomapp-miniapp-1.onrender.com/order/{order_id}"
+                        "text": f"🔔 Ваш заказ #{order_id} принят в работу!\n\n🔨 {work_type}"
                     })
                     sent.append(f"врачу {doc[1]}")
                 except Exception: pass
