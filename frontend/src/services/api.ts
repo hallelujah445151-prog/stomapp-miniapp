@@ -14,14 +14,25 @@ import {
 } from '../types';
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_URL || '/api';
-const AUTH_TOKEN = 'test_token'; // В продакшене получить от Telegram
+
+const getAuthToken = (): string => {
+  const user = localStorage.getItem('stomapp_user');
+  if (user) {
+    try { return JSON.parse(user).token || 'test_token'; } catch { return 'test_token'; }
+  }
+  return 'test_token';
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${AUTH_TOKEN}`
   }
+});
+
+api.interceptors.request.use(config => {
+  config.headers.Authorization = `Bearer ${getAuthToken()}`;
+  return config;
 });
 
 export const apiService = {

@@ -40,7 +40,14 @@ const LoginPage: React.FC = () => {
     setErrorMsg('');
     try {
       const result = await apiService.loginByTelegramId(Number(formData.telegram_id) || undefined as any, formData.name || undefined);
-      login({ id: result.user.id, name: result.user.name, telegram_id: String(result.user.telegram_id), role: result.user.role, is_admin: result.user.is_admin });
+      login({
+        id: result.user.id,
+        name: result.user.name,
+        telegram_id: String(result.user.telegram_id),
+        role: result.user.role,
+        is_admin: result.user.is_admin,
+        token: result.access_token
+      });
     } catch (err: any) {
       setErrorMsg(err?.response?.data?.detail || 'Ошибка входа');
     }
@@ -56,11 +63,11 @@ const LoginPage: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
             <label className="label">Telegram ID</label>
-            <input type="text" className="input" value={formData.telegram_id} onChange={e => setFormData({ ...formData, telegram_id: e.target.value })} placeholder="5563461010" />
+            <input type="text" className="input" value={formData.telegram_id} onChange={e => setFormData({ ...formData, telegram_id: e.target.value })} placeholder="Ваш Telegram ID" autoComplete="off" />
           </div>
           <div style={{ marginBottom: '20px' }}>
             <label className="label">ФИО</label>
-            <input type="text" className="input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Плюхин Матвей Александрович" />
+            <input type="text" className="input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Ваше ФИО" autoComplete="off" />
           </div>
           <button type="submit" disabled={loading} className="button button-primary" style={{ width: '100%', padding: '12px' }}>
             {loading ? 'Вход...' : 'Войти'}
@@ -365,9 +372,15 @@ const DashboardPage: React.FC = () => {
                       </table>
                     </details>
                   )}
-                </div>
-              )}
-            </div>
+          </div>
+        )}
+        {order.status === 'cancelled' && user?.is_admin && (
+          <div style={{ padding: '15px', backgroundColor: '#FFF3E0', borderRadius: '8px', textAlign: 'center', marginTop: '12px' }}>
+            <button onClick={() => { if(!confirm('Восстановить заказ?'))return; apiService.updateOrder(orderId,{status:'in_progress'}).then(()=>setOrder({...order,status:'in_progress'})).catch(()=>alert('Ошибка')); }}
+              style={{ padding: '14px 28px', backgroundColor: '#F9AB00', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' }}>↩ Восстановить заказ</button>
+          </div>
+        )}
+      </div>
           )}
         </div>
       )}
@@ -381,12 +394,12 @@ const DashboardPage: React.FC = () => {
       {/* Фильтр по врачу/технику (админ) */}
       {user?.is_admin && (
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-          <select value={doctorFilter} onChange={e => setDoctorFilter(Number(e.target.value))} style={{ flex: 1, padding: '8px 12px', border: '1px solid #DADCE0', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>
-            <option value={0}>👨‍⚕️ Все врачи</option>
+          <select value={doctorFilter} onChange={e => setDoctorFilter(Number(e.target.value))} style={{ width: '48%', padding: '8px 10px', border: '1px solid #DADCE0', borderRadius: '10px', fontSize: '13px', background: '#fff' }}>
+            <option value={0}>👨‍⚕️ Врачи</option>
             {doctors.map((d:any) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
-          <select value={technicianFilter} onChange={e => setTechnicianFilter(Number(e.target.value))} style={{ flex: 1, padding: '8px 12px', border: '1px solid #DADCE0', borderRadius: '8px', fontSize: '13px', background: '#fff' }}>
-            <option value={0}>🔧 Все техники</option>
+          <select value={technicianFilter} onChange={e => setTechnicianFilter(Number(e.target.value))} style={{ width: '48%', padding: '8px 10px', border: '1px solid #DADCE0', borderRadius: '10px', fontSize: '13px', background: '#fff' }}>
+            <option value={0}>🔧 Техники</option>
             {technicians.map((t:any) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
@@ -577,6 +590,12 @@ const OrderDetailsPage: React.FC = () => {
             <button onClick={markDone} style={{ padding: '14px 28px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' }}>
               ✅ Отметить как выполненный
             </button>
+          </div>
+        )}
+        {order.status === 'cancelled' && user?.is_admin && (
+          <div style={{ padding: '15px', backgroundColor: '#FFF3E0', borderRadius: '8px', textAlign: 'center', marginTop: '12px' }}>
+            <button onClick={() => { if(!confirm('Восстановить заказ?'))return; apiService.updateOrder(orderId,{status:'in_progress'}).then(()=>setOrder({...order,status:'in_progress'})).catch(()=>alert('Ошибка')); }}
+              style={{ padding: '14px 28px', backgroundColor: '#F9AB00', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' }}>↩ Восстановить заказ</button>
           </div>
         )}
       </div>
@@ -1056,11 +1075,11 @@ function App() {
     if (!localStorage.getItem('stomapp_user')) {
       const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       if (tgUser?.id) {
-        apiService.loginByTelegramId(tgUser.id)
-          .then(r => localStorage.setItem('stomapp_user', JSON.stringify({
-            id: r.user.id, name: r.user.name, telegram_id: String(r.user.telegram_id),
-            role: r.user.role, is_admin: r.user.is_admin
-          })))
+          apiService.loginByTelegramId(tgUser.id)
+            .then(r => localStorage.setItem('stomapp_user', JSON.stringify({
+              id: r.user.id, name: r.user.name, telegram_id: String(r.user.telegram_id),
+              role: r.user.role, is_admin: r.user.is_admin, token: r.access_token
+            })))
           .catch(() => {})
           .finally(() => { window.location.reload(); });
         return;

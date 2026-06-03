@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
+
+from auth_jwt import create_token, verify_token
 from fastapi.concurrency import asynccontextmanager
 from pydantic import BaseModel
 from typing import Optional, List
@@ -233,14 +235,16 @@ def verify_telegram_auth(init_data: str) -> dict:
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Получение текущего пользователя по токену"""
+    """Получение текущего пользователя по JWT-токену"""
     token = credentials.credentials
+    # JWT токен
+    payload = verify_token(token)
+    if payload:
+        return {"id": payload['user_id'], "name": payload['name'], "role": payload['role'], "is_admin": payload['is_admin']}
+    # Обратная совместимость (test_token)
     if token == "test_token":
         return {"id": 1, "name": "Test User", "role": "dispatcher", "is_admin": 1}
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Неверные данные аутентификации"
-    )
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный токен")
 
 
 
@@ -303,8 +307,9 @@ async def login_by_telegram_id(login_data: LoginRequest):
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден. Проверьте данные или обратитесь к администратору.")
     
+    token = create_token(user[0], user[1], user[2], bool(user[4]))
     return {
-        "access_token": "test_token",
+        "access_token": token,
         "user": {"id": user[0], "name": user[1], "role": user[2], "telegram_id": user[3], "is_admin": bool(user[4]), "is_active": bool(user[5])}
     }
 
