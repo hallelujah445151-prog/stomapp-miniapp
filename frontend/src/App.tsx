@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuthStore } from './store/auth';
 import { apiService } from './services/api';
@@ -56,11 +56,11 @@ const LoginPage: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
             <label className="label">Telegram ID</label>
-            <input type="text" className="input" value={formData.telegram_id} onChange={e => setFormData({ ...formData, telegram_id: e.target.value })} placeholder="Введите Telegram ID" autoComplete="off" />
+            <input type="text" className="input" value={formData.telegram_id} onChange={e => setFormData({ ...formData, telegram_id: e.target.value })} placeholder="5563461010" />
           </div>
           <div style={{ marginBottom: '20px' }}>
             <label className="label">ФИО</label>
-            <input type="text" className="input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Введите ФИО" autoComplete="off" />
+            <input type="text" className="input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Плюхин Матвей Александрович" />
           </div>
           <button type="submit" disabled={loading} className="button button-primary" style={{ width: '100%', padding: '12px' }}>
             {loading ? 'Вход...' : 'Войти'}
@@ -98,6 +98,7 @@ const DashboardPage: React.FC = () => {
   const [expandedDoc, setExpandedDoc] = useState<number|null>(null);
   const [expandedTech, setExpandedTech] = useState<number|null>(null);
   const [expandedWT, setExpandedWT] = useState<string|null>(null);
+  const [expandedPeriod, setExpandedPeriod] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [doctorFilter, setDoctorFilter] = useState(0);
   const [technicianFilter, setTechnicianFilter] = useState(0);
@@ -197,7 +198,7 @@ const DashboardPage: React.FC = () => {
       {/* Admin: сводка */}
       {user?.is_admin && (
         <div style={{ marginBottom: '12px' }}>
-          <div style={{ padding: '12px 16px', background: '#E8F0FE', borderRadius: '12px', display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: '#202124', border: '1px solid #D2E3FC' }}>
+          <div style={{ padding: '14px 18px', background: '#E8F0FE', borderRadius: '14px', display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '14px', color: '#202124', border: '1px solid #D2E3FC' }}>
             <span>📋 <b>{orders.length}</b></span>
             <span>🔵 <b>{orders.filter(o=>o.status==='in_progress').length}</b></span>
             <span>✅ <b>{orders.filter(o=>o.status==='completed').length}</b></span>
@@ -207,7 +208,7 @@ const DashboardPage: React.FC = () => {
             <button onClick={() => loadReport('urgent')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='urgent'?'#FCE8E6':'#fff', color: reportType==='urgent'?'#C5221F':'#5F6368' }}>🔥 Срочные</button>
             <button onClick={() => loadReport('overdue')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: reportType==='overdue'?'#FCE8E6':'#fff', color: reportType==='overdue'?'#C5221F':'#5F6368' }}>⚠️ Просрочено</button>
             <button onClick={() => { setReportType(reportType==='reports'?'':'reports'); setReportData(null); }} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types'||reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#1A73E8':'#fff', color: (reportType==='reports'||reportType==='doctors'||reportType==='technicians'||reportType==='workload'||reportType==='work_types'||reportType==='period_type'||reportType==='period_dates'||reportType==='period_result')?'#fff':'#5F6368' }}>📊 Отчеты</button>
-            <button onClick={() => window.open('/api/admin/export-db', '_blank')} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: '#fff', color: '#5F6368' }}>💾 Скачать БД</button>
+            <a href="/api/admin/export-db" onClick={(e: any) => { e.preventDefault(); window.open('/api/admin/export-db', '_blank'); }} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 500, border: '1px solid #DADCE0', borderRadius: '24px', cursor: 'pointer', background: '#fff', color: '#5F6368', textDecoration: 'none' }}>💾 Скачать БД</a>
           </div>
           {reportType === 'reports' && (
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
@@ -264,7 +265,7 @@ const DashboardPage: React.FC = () => {
                         <tr><td colSpan={4} style={{ padding: '6px 16px', background: '#F8F9FA', fontSize: '11px' }}>
                           {r.orders.map((o:any) => (
                             <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '4px 0', borderBottom: '1px solid #E8EAED', cursor: 'pointer', color: o.status==='completed'?'#34A853':'#5F6368' }}>
-                              #{o.id} {o.work_type} — {o.patient_name||'—'} | {o.deadline} | {o.status==='completed'?'✅':'🔵'}
+                              #{o.id} {o.work_type} — {o.patient_name||'—'} | {(o.deadline||'').split('-').reverse().join('.')} | {o.status==='completed'?'✅':'🔵'}
                             </div>
                           ))}
                         </td></tr>
@@ -288,7 +289,7 @@ const DashboardPage: React.FC = () => {
                         <tr><td colSpan={4} style={{ padding: '6px 16px', background: '#F8F9FA', fontSize: '11px' }}>
                           {r.orders.map((o:any) => (
                             <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '4px 0', borderBottom: '1px solid #E8EAED', cursor: 'pointer', color: o.status==='completed'?'#34A853':'#5F6368' }}>
-                              #{o.id} {o.work_type} — {o.patient_name||'—'} | {o.deadline} | {o.status==='completed'?'✅':'🔵'}
+                              #{o.id} {o.work_type} — {o.patient_name||'—'} | {(o.deadline||'').split('-').reverse().join('.')} | {o.status==='completed'?'✅':'🔵'}
                             </div>
                           ))}
                         </td></tr>
@@ -299,12 +300,12 @@ const DashboardPage: React.FC = () => {
               )}
               {reportType === 'urgent' && reportData.map((o: any) => (
                 <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '10px', marginBottom: '6px', backgroundColor: '#fff3e0', borderRadius: '6px', border: '1px solid #ffcc80', cursor: 'pointer', fontSize: '13px' }}>
-                  <b>#{o.id}</b> {o.work_type} — пациент: {o.patient_name||'—'} | ⏰ {o.deadline}
+                  <b>#{o.id}</b> {o.work_type} — пациент: {o.patient_name||'—'} | ⏰ {(o.deadline||'').split('-').reverse().join('.')}
                 </div>
               ))}
               {reportType === 'overdue' && reportData && reportData.map((o: any) => (
                 <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '10px', marginBottom: '6px', backgroundColor: '#ffebee', borderRadius: '6px', border: '1px solid #ef9a9a', cursor: 'pointer', fontSize: '13px' }}>
-                  <b>#{o.id}</b> {o.work_type} — {o.technician_name||'—'} | ⚠️ {o.deadline} | {o.patient_name||'—'}
+                  <b>#{o.id}</b> {o.work_type} — {o.technician_name||'—'} | ⚠️ {(o.deadline||'').split('-').reverse().join('.')} | {o.patient_name||'—'}
                 </div>
               ))}
               {reportType === 'workload' && (
@@ -328,7 +329,7 @@ const DashboardPage: React.FC = () => {
                         <tr><td colSpan={4} style={{ padding: '6px 16px', background: '#F8F9FA', fontSize: '11px' }}>
                           {r.orders.map((o:any) => (
                             <div key={o.id} onClick={() => navigate(`/order/${o.id}`)} style={{ padding: '4px 0', borderBottom: '1px solid #E8EAED', cursor: 'pointer', color: o.status==='completed'?'#34A853':'#5F6368' }}>
-                              #{o.id} {o.technician_name ? '🔧 '+o.technician_name+' · ' : ''}📦{o.quantity}шт — {o.patient_name||'—'} | {o.deadline} | {o.status==='completed'?'✅':'🔵'}
+                              #{o.id} {o.technician_name ? '🔧 '+o.technician_name+' · ' : ''}📦{o.quantity}шт — {o.patient_name||'—'} | {(o.deadline||'').split('-').reverse().join('.')} | {o.status==='completed'?'✅':'🔵'}
                             </div>
                           ))}
                         </td></tr>
@@ -341,26 +342,26 @@ const DashboardPage: React.FC = () => {
                 <div>
                   <div style={{fontSize:'12px',color:'#888',marginBottom:'10px'}}>📅 {reportData.period.start} — {reportData.period.end}</div>
                   {reportData.doctors && (
-                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>👨‍⚕️ По врачам</summary>
-                      <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
-                        <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '4px' }}>Врач</th><th style={{ padding: '4px' }}>Всего</th><th style={{ padding: '4px' }}>В работе</th><th style={{ padding: '4px' }}>Готово</th></tr></thead>
-                        <tbody>{reportData.doctors.map((r:any)=><tr key={r.id} style={{borderBottom:'1px solid #f0f0f0'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px'}}>{r.total}</td><td style={{padding:'4px',color:'#1976d2'}}>{r.active}</td><td style={{padding:'4px',color:'#388e3c'}}>{r.done}</td></tr>)}</tbody>
+                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>👨‍⚕️ По врачам ({reportData.doctors.length})</summary>
+                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                        <thead><tr style={{ borderBottom: '2px solid #DADCE0', textAlign: 'left', color: '#5F6368' }}><th style={{ padding: '4px', fontWeight: 500 }}>Врач</th><th style={{ padding: '4px', fontWeight: 500 }}>Всего</th><th style={{ padding: '4px', fontWeight: 500 }}>В работе</th><th style={{ padding: '4px', fontWeight: 500 }}>Готово</th></tr></thead>
+                        <tbody>{reportData.doctors.map((r:any) => (<React.Fragment key={r.id}><tr onClick={() => setExpandedPeriod(expandedPeriod===r.id?null:r.id)} style={{borderBottom:'1px solid #E8EAED',cursor:'pointer',background: expandedPeriod===r.id?'#F8F9FA':'#fff'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px',fontWeight:500}}>{r.total}</td><td style={{padding:'4px',color:'#1A73E8'}}>{r.active}</td><td style={{padding:'4px',color:'#34A853'}}>{r.done}</td></tr>{expandedPeriod===r.id && r.orders && (<tr><td colSpan={4} style={{padding:'6px 16px',background:'#F8F9FA',fontSize:'11px'}}>{r.orders.map((o:any) => (<div key={o.id} onClick={() => navigate('/order/'+o.id)} style={{padding:'4px 0',borderBottom:'1px solid #E8EAED',cursor:'pointer',color:o.status==='completed'?'#34A853':'#5F6368'}}>#{o.id} {o.work_type} — {o.patient_name||'—'} | {(o.deadline||'').split('-').reverse().join('.')} | {o.status==='completed'?'✅':'🔵'}</div>))}</td></tr>)}</React.Fragment>))}</tbody>
                       </table>
                     </details>
                   )}
                   {reportData.technicians && (
-                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>🔧 По техникам</summary>
-                      <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
-                        <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '4px' }}>Техник</th><th style={{ padding: '4px' }}>Всего</th><th style={{ padding: '4px' }}>В работе</th><th style={{ padding: '4px' }}>Готово</th></tr></thead>
-                        <tbody>{reportData.technicians.map((r:any)=><tr key={r.id} style={{borderBottom:'1px solid #f0f0f0'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px'}}>{r.total}</td><td style={{padding:'4px',color:'#1976d2'}}>{r.active}</td><td style={{padding:'4px',color:'#388e3c'}}>{r.done}</td></tr>)}</tbody>
+                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>🔧 По техникам ({reportData.technicians.length})</summary>
+                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                        <thead><tr style={{ borderBottom: '2px solid #DADCE0', textAlign: 'left', color: '#5F6368' }}><th style={{ padding: '4px', fontWeight: 500 }}>Техник</th><th style={{ padding: '4px', fontWeight: 500 }}>Всего</th><th style={{ padding: '4px', fontWeight: 500 }}>В работе</th><th style={{ padding: '4px', fontWeight: 500 }}>Готово</th></tr></thead>
+                        <tbody>{reportData.technicians.map((r:any) => (<React.Fragment key={r.id}><tr onClick={() => setExpandedPeriod(expandedPeriod===r.id?null:r.id)} style={{borderBottom:'1px solid #E8EAED',cursor:'pointer',background: expandedPeriod===r.id?'#F8F9FA':'#fff'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px',fontWeight:500}}>{r.total}</td><td style={{padding:'4px',color:'#1A73E8'}}>{r.active}</td><td style={{padding:'4px',color:'#34A853'}}>{r.done}</td></tr>{expandedPeriod===r.id && r.orders && (<tr><td colSpan={4} style={{padding:'6px 16px',background:'#F8F9FA',fontSize:'11px'}}>{r.orders.map((o:any) => (<div key={o.id} onClick={() => navigate('/order/'+o.id)} style={{padding:'4px 0',borderBottom:'1px solid #E8EAED',cursor:'pointer',color:o.status==='completed'?'#34A853':'#5F6368'}}>#{o.id} {o.work_type} — {o.patient_name||'—'} | {(o.deadline||'').split('-').reverse().join('.')} | {o.status==='completed'?'✅':'🔵'}</div>))}</td></tr>)}</React.Fragment>))}</tbody>
                       </table>
                     </details>
                   )}
                   {reportData.work_types && (
-                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>📋 По видам работ</summary>
-                      <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
-                        <thead><tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}><th style={{ padding: '4px' }}>Вид</th><th style={{ padding: '4px' }}>Всего</th><th style={{ padding: '4px' }}>В работе</th><th style={{ padding: '4px' }}>Готово</th></tr></thead>
-                        <tbody>{reportData.work_types.map((r:any)=><tr key={r.name} style={{borderBottom:'1px solid #f0f0f0'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px'}}>{r.total}</td><td style={{padding:'4px',color:'#1976d2'}}>{r.active}</td><td style={{padding:'4px',color:'#388e3c'}}>{r.done}</td></tr>)}</tbody>
+                    <details open style={{marginBottom:'12px'}}><summary style={{fontSize:'13px',fontWeight:600,cursor:'pointer',marginBottom:'6px'}}>📋 По видам работ ({reportData.work_types.length})</summary>
+                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                        <thead><tr style={{ borderBottom: '2px solid #DADCE0', textAlign: 'left', color: '#5F6368' }}><th style={{ padding: '4px', fontWeight: 500 }}>Вид</th><th style={{ padding: '4px', fontWeight: 500 }}>Всего</th><th style={{ padding: '4px', fontWeight: 500 }}>В работе</th><th style={{ padding: '4px', fontWeight: 500 }}>Готово</th></tr></thead>
+                        <tbody>{reportData.work_types.map((r:any) => (<React.Fragment key={r.name}><tr onClick={() => setExpandedPeriod(expandedPeriod===r.name?null:r.name)} style={{borderBottom:'1px solid #E8EAED',cursor:'pointer',background: expandedPeriod===r.name?'#F8F9FA':'#fff'}}><td style={{padding:'4px'}}>{r.name}</td><td style={{padding:'4px',fontWeight:500}}>{r.total}</td><td style={{padding:'4px',color:'#1A73E8'}}>{r.active}</td><td style={{padding:'4px',color:'#34A853'}}>{r.done}</td></tr>{expandedPeriod===r.name && r.orders && (<tr><td colSpan={4} style={{padding:'6px 16px',background:'#F8F9FA',fontSize:'11px'}}>{r.orders.map((o:any) => (<div key={o.id} onClick={() => navigate('/order/'+o.id)} style={{padding:'4px 0',borderBottom:'1px solid #E8EAED',cursor:'pointer',color:o.status==='completed'?'#34A853':'#5F6368'}}>#{o.id} {o.work_type} — {o.patient_name||'—'} | 📦{o.quantity}шт | {(o.deadline||'').split('-').reverse().join('.')} | {o.status==='completed'?'✅':'🔵'}</div>))}</td></tr>)}</React.Fragment>))}</tbody>
                       </table>
                     </details>
                   )}
@@ -374,7 +375,7 @@ const DashboardPage: React.FC = () => {
       {/* Поиск */}
       <div style={{ marginBottom: '12px' }}>
         <input type="text" placeholder="🔍 Поиск по пациенту, виду работ, номеру..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-          style={{ width: '100%', padding: '12px 16px', border: '1px solid #DADCE0', borderRadius: '12px', fontSize: '14px', background: '#fff', outline: 'none' }} />
+          style={{ width: '100%', padding: '14px 16px', border: '1px solid #DADCE0', borderRadius: '14px', fontSize: '15px', background: '#fff', outline: 'none' }} />
       </div>
 
       {/* Фильтр по врачу/технику (админ) */}
@@ -392,13 +393,13 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* Filters — Material segmented control */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: '16px', background: '#F1F3F4', borderRadius: '12px', padding: '3px' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: '16px', background: '#F1F3F4', borderRadius: '14px', padding: '4px' }}>
         {[['all','Все'],['in_progress','В работе'],['completed','Готово']].map(([k,v]) => (
           <button key={k} onClick={() => setFilter(k as any)}
-            style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: filter===k?500:400,
+            style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: '11px', fontSize: '14px', fontWeight: filter===k?500:400,
               background: filter===k?'#fff':'transparent', color: filter===k?'#1A73E8':'#5F6368',
               boxShadow: filter===k?'0 1px 2px rgba(0,0,0,.08)':'none', cursor: 'pointer', transition: 'all .15s' }}>
-            {v} <span style={{fontSize:11,marginLeft:2,opacity:.7}}>{orders.filter(o=>k==='all'?true:o.status===k).length}</span>
+            {v} <span style={{fontSize:12,marginLeft:2,opacity:.7}}>{orders.filter(o=>k==='all'?true:o.status===k).length}</span>
           </button>
         ))}
       </div>
@@ -462,30 +463,30 @@ const DashboardPage: React.FC = () => {
             <div style={{padding:'14px 16px'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'8px'}}>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:'15px',fontWeight:500,color:'#202124',marginBottom:'2px'}}>#{order.id} — {order.work_type}</div>
-                  <div style={{fontSize:'12px',color:'#5F6368'}}>👤 {order.patient_name||'Без пациента'} · 📦 {order.quantity} шт. · ⏰ {order.deadline}</div>
+                  <div style={{fontSize:'17px',fontWeight:500,color:'#202124',marginBottom:'4px'}}>#{order.id} — {order.patient_name||'Без пациента'}</div>
+                  <div style={{fontSize:'14px',color:'#5F6368',lineHeight:'1.5'}}>🔧 {order.work_type} · 📦 {order.quantity} шт. · ⏰ {(order.deadline||'').split('-').reverse().join('.')}</div>
                 </div>
-                <span style={{padding:'3px 10px',borderRadius:'12px',fontSize:'11px',fontWeight:500,color:'#fff',background:order.status==='in_progress'?'#FBBC04':order.status==='completed'?'#34A853':'#DADCE0',whiteSpace:'nowrap',marginLeft:'8px'}}>
+                <span style={{padding:'4px 12px',borderRadius:'14px',fontSize:'12px',fontWeight:500,color:'#fff',background:order.status==='in_progress'?'#FBBC04':order.status==='completed'?'#34A853':'#DADCE0',whiteSpace:'nowrap',marginLeft:'8px'}}>
                   {order.status==='in_progress'?'В работе':order.status==='completed'?'Готово':'Отменён'}
                 </span>
               </div>
               {(order.doctor_name||order.technician_name)&&(
-                <div style={{fontSize:'11px',color:'#80868B',marginBottom:'8px'}}>
+                <div style={{fontSize:'12px',color:'#80868B',marginBottom:'8px'}}>
                   {order.doctor_name&&<>👨‍⚕️{order.doctor_name}</>}{(order.doctor_name&&order.technician_name)&&' · '}{order.technician_name&&<>🔧{order.technician_name}</>}
                 </div>
               )}
               {order.status==='in_progress' && order.deadline < new Date().toISOString().split('T')[0] ? (
-                <div style={{fontSize:'11px',color:'#C5221F',background:'#FCE8E6',padding:'4px 8px',borderRadius:'8px',display:'inline-block',marginBottom:'8px'}}>⚠️ Просрочено: {order.deadline}</div>
+                <div style={{fontSize:'12px',color:'#C5221F',background:'#FCE8E6',padding:'5px 10px',borderRadius:'8px',display:'inline-block',marginBottom:'8px'}}>⚠️ Просрочено: {(order.deadline||'').split('-').reverse().join('.')}</div>
               ) : order.status==='in_progress' && order.deadline <= new Date(Date.now()+2*864e5).toISOString().split('T')[0] ? (
-                <div style={{fontSize:'11px',color:'#E37400',background:'#FEF7E0',padding:'4px 8px',borderRadius:'8px',display:'inline-block',marginBottom:'8px'}}>🔥 Срочно: {order.deadline}</div>
+                <div style={{fontSize:'12px',color:'#E37400',background:'#FEF7E0',padding:'5px 10px',borderRadius:'8px',display:'inline-block',marginBottom:'8px'}}>🔥 Срочно: {(order.deadline||'').split('-').reverse().join('.')}</div>
               ) : null}
-              <div style={{display:'flex',gap:'6px',marginTop:'4px'}}>
+              <div style={{display:'flex',gap:'8px',marginTop:'6px'}}>
                 {order.status==='in_progress'&&(user?.is_admin||user?.role==='technician')&&(
                   <button onClick={e=>{e.stopPropagation();apiService.updateOrder(order.id,{status:'completed'}).then(()=>loadOrdersFromApi()).catch(()=>{})}}
-                    style={{padding:'5px 14px',fontSize:'12px',fontWeight:500,border:'none',borderRadius:'24px',background:'#34A853',color:'#fff',cursor:'pointer'}}>✅ Готово</button>
+                    style={{padding:'7px 18px',fontSize:'13px',fontWeight:500,border:'none',borderRadius:'24px',background:'#34A853',color:'#fff',cursor:'pointer'}}>✅ Готово</button>
                 )}
                 <button onClick={e=>{e.stopPropagation();handleOrderClick(order.id)}}
-                  style={{padding:'5px 14px',fontSize:'12px',fontWeight:500,border:'1px solid #DADCE0',borderRadius:'24px',background:'#fff',color:'#5F6368',cursor:'pointer'}}>📋 Детали</button>
+                  style={{padding:'7px 18px',fontSize:'13px',fontWeight:500,border:'1px solid #DADCE0',borderRadius:'24px',background:'#fff',color:'#5F6368',cursor:'pointer'}}>📋 Детали</button>
               </div>
             </div>
             </div>
@@ -497,12 +498,22 @@ const DashboardPage: React.FC = () => {
 };
 
 // Photo loader
-const OrderPhotoInline: React.FC<{orderId: number}> = ({orderId}) => (
-  <div style={{marginTop:12}}><div style={{fontSize:13,fontWeight:600,marginBottom:8,color:'#555'}}>📸 Фото:</div>
-    <img src={`/api/orders/${orderId}/photo`} alt="Фото" style={{width:'100%',maxHeight:300,objectFit:'contain',borderRadius:8,border:'1px solid #e0e0e0'}}
-      onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-  </div>
-);
+const OrderPhotoInline: React.FC<{orderId: number}> = ({orderId}) => {
+  const [fs, setFs] = useState(false);
+  return (
+    <div style={{marginTop:12}}>
+      <div style={{fontSize:13,fontWeight:600,marginBottom:8,color:'#555'}}>📸 Фото:</div>
+      <img src={`/api/orders/${orderId}/photo`} alt="Фото" onClick={() => setFs(!fs)}
+        style={{width:'100%',maxHeight:300,objectFit:'contain',borderRadius:8,border:'1px solid #e0e0e0',cursor:'pointer'}}
+        onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+      {fs && (
+        <div onClick={() => setFs(false)} style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,.9)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <img src={`/api/orders/${orderId}/photo`} alt="Фото" style={{maxWidth:'100%',maxHeight:'100vh',objectFit:'contain'}} />
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Order Details Page
 const OrderDetailsPage: React.FC = () => {
@@ -514,6 +525,12 @@ const OrderDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { apiService.getOrder(orderId).then(setOrder).catch(()=>{}).finally(()=>setLoading(false)); }, [orderId]);
+
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(() => navigate('/')); }
+    return () => { if (tg?.BackButton) { tg.BackButton.offClick(); tg.BackButton.hide(); } };
+  }, [navigate]);
 
   const markDone = () => {
     if (!confirm('Отметить заказ как выполненный?')) return;
@@ -548,7 +565,7 @@ const OrderDetailsPage: React.FC = () => {
             <div>📊 <strong>Количество:</strong> {order.quantity} шт.</div>
             <div>👨‍⚕️ <strong>Врач:</strong> {order.doctor_name || order.doctor_id || '—'}</div>
             <div>🔧 <strong>Техник:</strong> {order.technician_name || order.technician_id || '—'}</div>
-            <div>⏰ <strong>Дедлайн:</strong> {order.deadline}</div>
+            <div>⏰ <strong>Дедлайн:</strong> {(order.deadline||'').split('-').reverse().join('.')}</div>
             <div>📅 <strong>Создан:</strong> {new Date(order.created_at).toLocaleDateString('ru-RU')}</div>
             {order.description && <div style={{ marginTop: '10px', padding: '12px', backgroundColor: '#fff3e0', borderRadius: '6px' }}>📝 <strong>Описание:</strong> {order.description}</div>}
             {order.photo_id && <OrderPhotoInline orderId={order.id} />}
@@ -575,13 +592,15 @@ const CreateOrderPage: React.FC = () => {
   const [formData, setFormData] = useState({
     patient_name: '',
     work_type: '',
-    quantity: 1,
+    quantity: 0,
     deadline: '',
     description: '',
     doctor_id: 0,
     technician_id: 0
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const cameraRef2 = useRef<HTMLInputElement>(null);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [workTypesCr, setWorkTypesCr] = useState<any[]>([]);
@@ -626,6 +645,41 @@ const CreateOrderPage: React.FC = () => {
     } catch (e: any) {
       alert('Ошибка: ' + (e?.response?.data?.detail || e.message));
     }
+  };
+
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  const takePhoto = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setCameraStream(stream);
+      setShowCamera(true);
+      setTimeout(async () => {
+        if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+      }, 100);
+    } catch (e) { alert('Нет доступа к камере'); }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const v = videoRef.current, c = canvasRef.current;
+      c.width = v.videoWidth || 640; c.height = v.videoHeight || 480;
+      c.getContext('2d')?.drawImage(v, 0, 0);
+      c.toBlob(b => {
+        if (b && b.size > 0) {
+          const file = new File([b], 'photo.jpg', { type: 'image/jpeg' });
+          setPhotoFile(file);
+          alert('Фото прикреплено!');
+        } else {
+          alert('Ошибка создания фото');
+        }
+      }, 'image/jpeg', 0.9);
+    }
+    cameraStream?.getTracks().forEach(t => t.stop());
+    setCameraStream(null); setShowCamera(false);
   };
 
   const handleBack = () => {
@@ -798,10 +852,10 @@ const CreateOrderPage: React.FC = () => {
                   type="number"
                   required
                   min="1"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                  value={formData.quantity || ''}
+                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
                   style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }}
-                  placeholder="Количество единиц"
+                  placeholder="Введите количество"
                 />
               </div>
 
@@ -831,8 +885,14 @@ const CreateOrderPage: React.FC = () => {
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>
                   📸 Фото (необязательно)
                 </label>
-                <input type="file" accept="image/*" onChange={e => setPhotoFile(e.target.files?.[0] || null)}
-                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }} />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input type="file" id="galleryInput" accept="image/*" onChange={e => setPhotoFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+                  <button type="button" onClick={() => (document.getElementById('galleryInput') as HTMLInputElement)?.click()}
+                    style={{ flex: 1, padding: '14px', background: '#f5f5f5', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', color: '#555', border: '1px solid #ddd' }}>🖼️ Галерея</button>
+                  <button type="button" onClick={takePhoto}
+                    style={{ flex: 1, padding: '14px', background: '#1A73E8', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', color: '#fff', border: 'none' }}>📷 Сделать фото</button>
+                </div>
+                {photoFile && <div style={{ marginTop: '8px', fontSize: '12px', color: '#34A853' }}>✅ {photoFile.name} ({(photoFile.size/1024).toFixed(0)} КБ)</div>}
               </div>
 
               <div style={{ marginBottom: '15px' }}>
@@ -891,6 +951,20 @@ const CreateOrderPage: React.FC = () => {
             </>
           )}
         </form>
+
+        {/* Камера */}
+        {showCamera && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+            <video ref={videoRef} autoPlay playsInline style={{ flex: 1, width: '100%', objectFit: 'cover' }} />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <div style={{ padding: '20px', display: 'flex', gap: '12px', justifyContent: 'center', background: '#000' }}>
+              <button type="button" onClick={() => { cameraStream?.getTracks().forEach(t => t.stop()); setCameraStream(null); setShowCamera(false); }}
+                style={{ flex: 1, padding: '14px', fontSize: '16px', borderRadius: '8px', border: 'none', background: '#444', color: '#fff' }}>Отмена</button>
+              <button type="button" onClick={capturePhoto}
+                style={{ flex: 1, padding: '14px', fontSize: '16px', borderRadius: '8px', border: 'none', background: '#1A73E8', color: '#fff' }}>📷 Снять</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

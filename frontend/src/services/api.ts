@@ -156,7 +156,7 @@ export const apiService = {
   },
 
   async getPeriodReport(type: string, start: string, end: string): Promise<any> {
-    const response = await api.get('/reports/period', { params: { report_type: type, start, end } });
+    const response = await api.get('/reports/period', { params: { report_type: type, start, end, details: true } });
     return response.data;
   }
 };

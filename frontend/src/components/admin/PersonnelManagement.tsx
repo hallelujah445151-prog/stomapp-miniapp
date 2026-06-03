@@ -23,6 +23,9 @@ export const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ role }
 
   useEffect(() => {
     loadPersonnel();
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(() => navigate('/')); }
+    return () => { if (tg?.BackButton) { tg.BackButton.offClick(); tg.BackButton.hide(); } };
   }, [role]);
 
   const loadPersonnel = async () => {
@@ -411,12 +414,14 @@ const EditPersonnelForm: React.FC<{ personnel: PersonnelDetail; onSuccess: () =>
     <form onSubmit={handleSubmit}>
       {/* Статистика */}
       <div style={{
-        backgroundColor: 'var(--tg-theme-secondary-bg-color, #f5f5f5)',
+        backgroundColor: '#ffffff',
         padding: '12px',
         borderRadius: '8px',
-        marginBottom: '20px'
+        marginBottom: '20px',
+        color: '#202124',
+        border: '1px solid #dadce0'
       }}>
-        <div style={{ fontSize: '13px', color: 'var(--tg-theme-hint-color, #999999)', marginBottom: '8px' }}>
+        <div style={{ fontSize: '13px', color: '#5f6368', marginBottom: '8px' }}>
           📊 Статистика:
         </div>
         <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
